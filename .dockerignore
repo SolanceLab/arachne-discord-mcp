@@ -1,0 +1,10 @@
+node_modules/
+src/
+.git/
+.gitignore
+.env
+.env.template
+*.md
+*.db
+DEVLOG.md
+arcadia-vox-recon.md
