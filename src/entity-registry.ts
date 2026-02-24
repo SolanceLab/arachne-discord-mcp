@@ -37,6 +37,14 @@ export class EntityRegistry {
       CREATE INDEX IF NOT EXISTS idx_entity_servers_server
         ON entity_servers(server_id);
     `);
+
+    // Migration: add role_id column if missing
+    const columns = this.db.prepare("PRAGMA table_info(entity_servers)").all() as Array<{ name: string }>;
+    if (!columns.some(c => c.name === 'role_id')) {
+      this.db.exec("ALTER TABLE entity_servers ADD COLUMN role_id TEXT DEFAULT NULL");
+      logger.info('Migration: added role_id column to entity_servers');
+    }
+
     logger.info('Entity registry initialized');
   }
 
@@ -122,13 +130,44 @@ export class EntityRegistry {
   }
 
   /**
-   * Remove an entity from a server.
+   * Remove an entity from a server. Returns the role_id if one existed (for cleanup).
    */
-  removeServer(entityId: string, serverId: string): boolean {
+  removeServer(entityId: string, serverId: string): { removed: boolean; roleId: string | null } {
+    const existing = this.db.prepare(
+      'SELECT role_id FROM entity_servers WHERE entity_id = ? AND server_id = ?'
+    ).get(entityId, serverId) as { role_id: string | null } | undefined;
+
     const result = this.db.prepare(`
       DELETE FROM entity_servers WHERE entity_id = ? AND server_id = ?
     `).run(entityId, serverId);
-    return result.changes > 0;
+    return { removed: result.changes > 0, roleId: existing?.role_id ?? null };
+  }
+
+  /**
+   * Update the role_id for an entity-server pair.
+   */
+  updateServerRoleId(entityId: string, serverId: string, roleId: string): void {
+    this.db.prepare(
+      'UPDATE entity_servers SET role_id = ? WHERE entity_id = ? AND server_id = ?'
+    ).run(roleId, entityId, serverId);
+  }
+
+  /**
+   * Get a map of role_id → entity_id for a given server (for mention routing).
+   */
+  getRoleEntityMap(serverId: string): Map<string, string> {
+    const rows = this.db.prepare(`
+      SELECT es.entity_id, es.role_id
+      FROM entity_servers es
+      JOIN entities e ON e.id = es.entity_id
+      WHERE es.server_id = ? AND es.role_id IS NOT NULL AND e.active = 1
+    `).all(serverId) as Array<{ entity_id: string; role_id: string }>;
+
+    const map = new Map<string, string>();
+    for (const row of rows) {
+      map.set(row.role_id, row.entity_id);
+    }
+    return map;
   }
 
   /**

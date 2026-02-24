@@ -48,6 +48,7 @@ export class Gateway extends EventEmitter {
         webhookId: message.webhookId,
         content: message.content,
         timestamp: message.createdAt,
+        mentionedRoleIds: message.mentions.roles.map(r => r.id),
       };
 
       this.emit('message', normalized);

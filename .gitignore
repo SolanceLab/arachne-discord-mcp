@@ -3,6 +3,8 @@ dist/
 .env
 .dev.vars
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 DEVLOG.md
 arcadia-vox-recon.md

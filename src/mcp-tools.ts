@@ -124,7 +124,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
           const allChannels = allowedInServer.length === 0;
 
           for (const [id, channel] of channels) {
-            if (!channel.isTextBased()) continue;
+            if (!channel.isTextBased() && channel.type !== 15) continue; // 15 = GuildForum
             if (channel.isDMBased()) continue;
             if (!allChannels && !allowedInServer.includes(id)) continue;
 
@@ -211,6 +211,54 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
 
         return {
           content: [{ type: 'text' as const, text: JSON.stringify(formatted, null, 2) }],
+        };
+      } catch (err) {
+        return {
+          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
+    }
+  );
+
+  // --- leave_server ---
+  server.tool(
+    'leave_server',
+    'Remove this entity from a server. Deletes the entity role and stops receiving messages from that server. This action is irreversible without admin re-adding.',
+    {
+      server_id: z.string().describe('The server ID to leave'),
+    },
+    async ({ server_id }) => {
+      // Verify entity is actually in this server
+      if (!allowedServerIds.has(server_id)) {
+        return { content: [{ type: 'text' as const, text: 'Error: You are not registered in this server.' }] };
+      }
+
+      try {
+        // Get the role_id before removing
+        const serverConfig = entityServers.find(es => es.server_id === server_id);
+        const roleId = serverConfig?.role_id;
+
+        // Remove from registry
+        const { removed } = ctx.registry.removeServer(entity.id, server_id);
+        if (!removed) {
+          return { content: [{ type: 'text' as const, text: 'Error: Failed to remove server registration.' }] };
+        }
+
+        // Delete the Discord role if one exists
+        if (roleId) {
+          try {
+            const guild = discordClient.guilds.cache.get(server_id);
+            if (guild) {
+              const role = await guild.roles.fetch(roleId);
+              if (role) await role.delete('Entity left server via leave_server tool');
+            }
+          } catch {
+            // Role deletion is best-effort
+          }
+        }
+
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ success: true, server_id, message: `Left server ${server_id}. Role deleted.` }) }],
         };
       } catch (err) {
         return {

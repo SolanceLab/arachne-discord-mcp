@@ -75,6 +75,7 @@ export class MessageBus {
       author_name: m.authorName,
       content: m.content,
       timestamp: m.timestamp.toISOString(),
+      addressed: m.addressed,
     }));
   }
 

@@ -20,6 +20,7 @@ export interface EntityServer {
   server_id: string;
   channels: string; // JSON array of channel IDs (empty array = all)
   tools: string;    // JSON array of allowed tool names (empty array = all)
+  role_id: string | null; // Discord role ID for @mentions
 }
 
 export interface EntityWithServers extends Entity {
@@ -37,6 +38,7 @@ export interface QueuedMessage {
   content: string;
   timestamp: Date;
   expiresAt: Date;
+  addressed: boolean; // true when this entity was @mentioned by role
 }
 
 export interface ReadableMessage {
@@ -47,6 +49,7 @@ export interface ReadableMessage {
   author_name: string;
   content: string;
   timestamp: string; // ISO string
+  addressed: boolean;
 }
 
 // --- Discord Gateway ---
@@ -61,6 +64,7 @@ export interface NormalizedMessage {
   webhookId: string | null;
   content: string;
   timestamp: Date;
+  mentionedRoleIds: string[];
 }
 
 // --- MCP Context ---

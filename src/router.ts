@@ -33,6 +33,18 @@ export class Router {
 
     if (entities.length === 0) return;
 
+    // Build role → entity map for mention detection
+    const roleEntityMap = msg.mentionedRoleIds.length > 0
+      ? this.registry.getRoleEntityMap(msg.serverId)
+      : new Map<string, string>();
+
+    // Set of entity IDs that were @mentioned by role
+    const addressedEntityIds = new Set<string>();
+    for (const roleId of msg.mentionedRoleIds) {
+      const entityId = roleEntityMap.get(roleId);
+      if (entityId) addressedEntityIds.add(entityId);
+    }
+
     // Push to each entity's queue
     for (const entity of entities) {
       this.bus.push(entity.id, {
@@ -43,6 +55,7 @@ export class Router {
         authorName: msg.authorName,
         content: msg.content,
         timestamp: msg.timestamp,
+        addressed: addressedEntityIds.has(entity.id),
       });
     }
 

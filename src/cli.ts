@@ -2,6 +2,8 @@ import 'dotenv/config';
 import { EntityRegistry } from './entity-registry.js';
 
 const DB_PATH = process.env.DB_PATH || './arachne.db';
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+const DISCORD_API = 'https://discord.com/api/v10';
 
 const registry = new EntityRegistry(DB_PATH);
 const args = process.argv.slice(2);
@@ -12,6 +14,43 @@ function getFlag(name: string): string | undefined {
   const idx = args.indexOf(`--${name}`);
   if (idx === -1 || idx + 1 >= args.length) return undefined;
   return args[idx + 1];
+}
+
+async function discordRequest(path: string, method: string, body?: unknown): Promise<any> {
+  if (!DISCORD_BOT_TOKEN) throw new Error('DISCORD_BOT_TOKEN not set — cannot call Discord API');
+  const res = await fetch(`${DISCORD_API}${path}`, {
+    method,
+    headers: {
+      'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Discord API ${method} ${path} failed (${res.status}): ${text}`);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+async function createEntityRole(serverId: string, entityName: string): Promise<string> {
+  const role = await discordRequest(`/guilds/${serverId}/roles`, 'POST', {
+    name: entityName,
+    mentionable: true,
+    permissions: '0', // No permissions — role is just for @mentions
+  });
+  return role.id;
+}
+
+async function deleteEntityRole(serverId: string, roleId: string): Promise<void> {
+  await discordRequest(`/guilds/${serverId}/roles/${roleId}`, 'DELETE');
+}
+
+async function sendAnnouncement(channelId: string, entityName: string, roleId: string): Promise<void> {
+  await discordRequest(`/channels/${channelId}/messages`, 'POST', {
+    content: `**${entityName}** has joined this server. You can mention them with <@&${roleId}>.`,
+  });
 }
 
 async function main() {
@@ -48,7 +87,7 @@ async function main() {
             console.log(`  ${e.name} (${e.id})`);
             console.log(`    Created: ${e.created_at}`);
             console.log(`    Avatar:  ${e.avatar_url || '(none)'}`);
-            console.log(`    Servers: ${servers.length === 0 ? '(none)' : servers.map(s => s.server_id).join(', ')}`);
+            console.log(`    Servers: ${servers.length === 0 ? '(none)' : servers.map(s => `${s.server_id}${s.role_id ? ` (role: ${s.role_id})` : ''}`).join(', ')}`);
             console.log();
           }
           break;
@@ -95,7 +134,7 @@ async function main() {
           const entityId = getFlag('entity');
           const serverId = getFlag('server');
           if (!entityId || !serverId) {
-            console.error('Usage: cli server add --entity <id> --server <server_id> [--channels ch1,ch2]');
+            console.error('Usage: cli server add --entity <id> --server <server_id> [--channels ch1,ch2] [--announce <channel_id>]');
             process.exit(1);
           }
           const entity = registry.getEntity(entityId);
@@ -106,11 +145,34 @@ async function main() {
           const channelsStr = getFlag('channels');
           const channels = channelsStr ? channelsStr.split(',').map(c => c.trim()) : [];
           registry.addServer(entityId, serverId, channels);
-          console.log(`Entity ${entity.name} added to server ${serverId}`);
+
+          // Auto-create Discord role
+          let roleId: string | null = null;
+          try {
+            roleId = await createEntityRole(serverId, entity.name);
+            registry.updateServerRoleId(entityId, serverId, roleId);
+            console.log(`Entity ${entity.name} added to server ${serverId}`);
+            console.log(`  Role created: @${entity.name} (${roleId})`);
+          } catch (err) {
+            console.log(`Entity ${entity.name} added to server ${serverId}`);
+            console.warn(`  ⚠  Could not create Discord role: ${err instanceof Error ? err.message : String(err)}`);
+          }
+
           if (channels.length > 0) {
             console.log(`  Channels: ${channels.join(', ')}`);
           } else {
             console.log('  Channels: all');
+          }
+
+          // Auto-announce if requested
+          const announceChannel = getFlag('announce');
+          if (announceChannel && roleId) {
+            try {
+              await sendAnnouncement(announceChannel, entity.name, roleId);
+              console.log(`  Announced in channel ${announceChannel}`);
+            } catch (err) {
+              console.warn(`  ⚠  Announcement failed: ${err instanceof Error ? err.message : String(err)}`);
+            }
           }
           break;
         }
@@ -122,8 +184,18 @@ async function main() {
             console.error('Usage: cli server remove --entity <id> --server <server_id>');
             process.exit(1);
           }
-          if (registry.removeServer(entityId, serverId)) {
+          const { removed, roleId } = registry.removeServer(entityId, serverId);
+          if (removed) {
             console.log(`Entity ${entityId} removed from server ${serverId}`);
+            // Auto-delete Discord role
+            if (roleId) {
+              try {
+                await deleteEntityRole(serverId, roleId);
+                console.log(`  Role deleted: ${roleId}`);
+              } catch (err) {
+                console.warn(`  ⚠  Could not delete Discord role: ${err instanceof Error ? err.message : String(err)}`);
+              }
+            }
           } else {
             console.error('No matching entity-server record found.');
           }
@@ -140,7 +212,7 @@ async function main() {
       console.log('  entity list');
       console.log('  entity deactivate --id <entity_id>');
       console.log('  entity key-regen --id <entity_id>');
-      console.log('  server add --entity <id> --server <server_id> [--channels ch1,ch2]');
+      console.log('  server add --entity <id> --server <server_id> [--channels ch1,ch2] [--announce <channel_id>]');
       console.log('  server remove --entity <id> --server <server_id>');
     }
   } finally {
