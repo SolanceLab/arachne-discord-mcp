@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.dev.vars
+*.db
+*.sqlite
+DEVLOG.md
+arcadia-vox-recon.md
