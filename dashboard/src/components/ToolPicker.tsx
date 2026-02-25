@@ -35,7 +35,7 @@ const TOOL_GROUPS = [
   },
   {
     label: 'Awareness',
-    tools: ['get_entity_info', 'get_channel_history', 'search_messages', 'list_members', 'get_user_info', 'list_roles'],
+    tools: ['get_entity_info', 'introduce', 'get_channel_history', 'search_messages', 'list_members', 'get_user_info', 'list_roles'],
   },
   {
     label: 'System',

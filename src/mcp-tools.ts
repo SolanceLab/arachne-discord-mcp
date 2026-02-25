@@ -4,6 +4,19 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { EntityContext } from './types.js';
 
 /**
+ * Translate Discord API errors into human-readable messages.
+ */
+function friendlyError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg === 'Missing Access') return 'Bot lacks permission in this channel. Ask the server admin to grant Arachne the "Read Message History" and "Add Reactions" permissions.';
+  if (msg === 'Missing Permissions') return 'Bot lacks the required Discord permission for this action. Ask the server admin to check Arachne\'s role.';
+  if (msg === 'Unknown Message') return 'Message not found — it may have been deleted.';
+  if (msg === 'Unknown Channel') return 'Channel not found or bot cannot see it.';
+  if (msg.includes('Missing Access')) return `Discord permission error: ${msg}. Check bot role permissions.`;
+  return msg;
+}
+
+/**
  * Register Phase 1 MCP tools on an McpServer, scoped to an entity context.
  */
 export function registerTools(server: McpServer, ctx: EntityContext): void {
@@ -70,7 +83,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -101,7 +114,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -145,7 +158,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -223,7 +236,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -267,7 +280,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -315,7 +328,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -344,7 +357,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -379,7 +392,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -429,7 +442,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -458,7 +471,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -487,7 +500,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -516,7 +529,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -550,7 +563,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -586,7 +599,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -628,7 +641,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -676,7 +689,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -704,7 +717,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -734,7 +747,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -764,7 +777,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -806,7 +819,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -844,7 +857,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -900,7 +913,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -937,7 +950,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -971,7 +984,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -1003,7 +1016,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -1035,7 +1048,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -1135,7 +1148,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -1172,7 +1185,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -1210,7 +1223,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
@@ -1245,7 +1258,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         };
       } catch (err) {
         return {
-          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
         };
       }
     }
