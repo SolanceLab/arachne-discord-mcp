@@ -68,7 +68,10 @@
 
 ### 2. Router
 - Checks entity registry: which entities are subscribed to this channel?
+- **Blocked channel filter:** Skips entities where the channel is in their `blocked_channels` list (hard filter — messages never enter the queue)
+- **Trigger word detection:** Checks message content against each entity's `triggers` list (case-insensitive substring match), sets `triggered` flag on queued messages
 - For each matched entity, pushes the message into that entity's Message Bus slot
+- **Owner notifications:** When an entity is @mentioned (`notify_on_mention`) or trigger-matched (`notify_on_trigger`), sends a DM from the Arachne bot to the entity owner with message details and a jump link
 - Filters based on per-entity channel allowlist
 - Attaches metadata (channel_id, author, timestamp) but message content is treated as transient
 
@@ -88,7 +91,7 @@
   - Unauthenticated requests return 401 with `WWW-Authenticate` header pointing to resource metadata
 - On valid API key auth, derives decryption key via HKDF and decrypts queued messages for the authenticated entity
 - Exposed MCP tools (scoped per entity):
-  - `read_messages` — returns decrypted queue contents for subscribed channels
+  - `read_messages` — returns decrypted queue contents for subscribed channels (supports `triggered_only` filter)
   - `send_message` — posts via webhook with entity's name + avatar
   - `send_dm` — sends DM as the bot (with entity context)
   - `add_reaction` — reacts to a message
@@ -709,5 +712,5 @@ DATA_DIR=/data            # Persistent volume for SQLite + avatars
 ## Open Design Questions
 
 1. **DM routing:** How do we route DMs to the right entity? (DMs arrive to the bot, not a specific entity)
-2. **Name triggers:** Should the bot auto-detect entity names in messages and route accordingly?
+2. ~~**Name triggers:** Should the bot auto-detect entity names in messages and route accordingly?~~ **Implemented** — per-entity trigger words with `triggered_only` filter in `read_messages`
 3. **Audit logging:** Metadata-only logs (who sent when, no content) for the operator?

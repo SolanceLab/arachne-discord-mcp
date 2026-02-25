@@ -20,6 +20,9 @@ interface Entity {
   accent_color: string | null;
   platform: string | null;
   owner_name: string | null;
+  triggers: string[];
+  notify_on_mention: boolean;
+  notify_on_trigger: boolean;
   created_at: string;
   servers: EntityServer[];
 }
@@ -45,6 +48,9 @@ export default function MyEntities() {
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editPlatform, setEditPlatform] = useState('');
+  const [editTriggers, setEditTriggers] = useState('');
+  const [editNotifyMention, setEditNotifyMention] = useState(false);
+  const [editNotifyTrigger, setEditNotifyTrigger] = useState(false);
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -155,15 +161,22 @@ export default function MyEntities() {
     setEditName(entity.name);
     setEditDesc(entity.description || '');
     setEditPlatform(entity.platform || '');
+    setEditTriggers((entity.triggers || []).join(', '));
+    setEditNotifyMention(entity.notify_on_mention ?? false);
+    setEditNotifyTrigger(entity.notify_on_trigger ?? false);
   };
 
   const saveEdit = async (entityId: string) => {
+    const triggers = editTriggers.split(',').map(t => t.trim()).filter(Boolean);
     await apiFetch(`/api/entities/${entityId}`, {
       method: 'PATCH',
       body: JSON.stringify({
         name: editName,
         description: editDesc || null,
         platform: editPlatform || null,
+        triggers,
+        notify_on_mention: editNotifyMention,
+        notify_on_trigger: editNotifyTrigger,
       }),
     });
     setEditing(null);
@@ -351,6 +364,40 @@ export default function MyEntities() {
                         ))}
                       </div>
                     </div>
+                    {/* Triggers & Notifications */}
+                    <div className="border-t border-border pt-3 space-y-3">
+                      <div>
+                        <label className="text-xs text-text-muted block mb-1">Trigger Words</label>
+                        <input
+                          value={editTriggers}
+                          onChange={e => setEditTriggers(e.target.value)}
+                          placeholder="keyword1, keyword2, keyword3"
+                          className="w-full bg-bg-deep border border-border rounded px-3 py-2 text-sm"
+                        />
+                        <p className="text-[10px] text-text-muted mt-1">(comma-separated keywords that flag messages for this entity)</p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editNotifyMention}
+                            onChange={e => setEditNotifyMention(e.target.checked)}
+                            className="w-3.5 h-3.5 rounded border-border accent-accent"
+                          />
+                          <span className="text-xs text-text-muted">Notify on @mention</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editNotifyTrigger}
+                            onChange={e => setEditNotifyTrigger(e.target.checked)}
+                            className="w-3.5 h-3.5 rounded border-border accent-accent"
+                          />
+                          <span className="text-xs text-text-muted">Notify on trigger word</span>
+                        </label>
+                        <p className="text-[10px] text-text-muted">Arachne will DM you when your entity is mentioned or triggered</p>
+                      </div>
+                    </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => saveEdit(entity.id)}
@@ -503,6 +550,27 @@ export default function MyEntities() {
                     )}
                     {entity.description && (
                       <p className="text-sm text-text-muted mt-1 leading-relaxed">{entity.description}</p>
+                    )}
+                    {((entity.triggers && entity.triggers.length > 0) || entity.notify_on_mention || entity.notify_on_trigger) && (
+                      <div className="mt-3 pt-3 border-t border-border space-y-1.5">
+                        {entity.triggers && entity.triggers.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {entity.triggers.map((t, i) => (
+                              <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-bg-deep border border-border text-text-muted">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex gap-3">
+                          {entity.notify_on_mention && (
+                            <span className="text-[10px] text-accent">DM on @mention</span>
+                          )}
+                          {entity.notify_on_trigger && (
+                            <span className="text-[10px] text-accent">DM on trigger</span>
+                          )}
+                        </div>
+                      </div>
                     )}
                     <div className="mt-3 pt-3 border-t border-border space-y-1">
                       <button

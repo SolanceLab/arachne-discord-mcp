@@ -18,6 +18,9 @@ export interface Entity {
   created_at: string;
   active: number;
   owner_id: string | null; // Discord user ID of entity owner
+  triggers: string;           // JSON array of trigger word strings
+  notify_on_mention: number;  // 1 = DM owner when entity is @mentioned
+  notify_on_trigger: number;  // 1 = DM owner when trigger word matched
 }
 
 export interface EntityServer {
@@ -47,6 +50,7 @@ export interface QueuedMessage {
   timestamp: Date;
   expiresAt: Date;
   addressed: boolean;  // true when this entity was @mentioned by role
+  triggered: boolean;  // true when message content matched an entity trigger word
   encrypted: boolean;  // true when content is AES-256-GCM encrypted blob (base64)
 }
 
@@ -59,6 +63,7 @@ export interface ReadableMessage {
   content: string;
   timestamp: string; // ISO string
   addressed: boolean;
+  triggered: boolean;
 }
 
 // --- Discord Gateway ---

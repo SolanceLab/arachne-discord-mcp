@@ -39,7 +39,7 @@ async function main() {
   });
 
   // Initialize router (gateway → entity queues)
-  const _router = new Router(gateway, registry, bus);
+  const _router = new Router(gateway, registry, bus, gateway.discordClient);
 
   // Initialize webhook manager
   const webhookManager = new WebhookManager(gateway.discordClient);

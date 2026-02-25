@@ -41,7 +41,7 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
 
   // POST /api/entities — create entity (self-service)
   router.post('/', async (req: Request, res: Response) => {
-    const { name, description, accent_color, platform } = req.body;
+    const { name, description, accent_color, platform, triggers, notify_on_mention, notify_on_trigger } = req.body;
     if (!name || !name.trim()) {
       res.status(400).json({ error: 'name required' });
       return;
@@ -54,11 +54,14 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
     }
     const { entity, apiKey } = await registry.createEntity(name.trim(), undefined);
     registry.setEntityOwner(entity.id, req.user!.sub, req.user!.username);
-    if (description || accent_color || platform) {
+    if (description || accent_color || platform || triggers || notify_on_mention !== undefined || notify_on_trigger !== undefined) {
       registry.updateEntityIdentity(entity.id, {
         description: description?.trim() || undefined,
         accentColor: accent_color || undefined,
         platform: platform || undefined,
+        triggers: Array.isArray(triggers) ? triggers : undefined,
+        notifyOnMention: notify_on_mention !== undefined ? !!notify_on_mention : undefined,
+        notifyOnTrigger: notify_on_trigger !== undefined ? !!notify_on_trigger : undefined,
       });
     }
     res.json({
@@ -86,6 +89,9 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
       platform: e.platform,
       owner_name: e.owner_name,
       created_at: e.created_at,
+      triggers: JSON.parse(e.triggers || '[]'),
+      notify_on_mention: !!e.notify_on_mention,
+      notify_on_trigger: !!e.notify_on_trigger,
       servers: registry.getEntityServers(e.id).map(s => {
         const guild = discordClient.guilds.cache.get(s.server_id);
         return {
@@ -125,6 +131,9 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
       owner_name: entity.owner_name,
       owner_id: entity.owner_id,
       created_at: entity.created_at,
+      triggers: JSON.parse(entity.triggers || '[]'),
+      notify_on_mention: !!entity.notify_on_mention,
+      notify_on_trigger: !!entity.notify_on_trigger,
       servers: servers.map(s => {
         const guild = discordClient.guilds.cache.get(s.server_id);
         return {
@@ -151,8 +160,17 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
       res.status(403).json({ error: 'Not your entity' });
       return;
     }
-    const { name, avatar_url, description, accent_color, platform } = req.body;
-    registry.updateEntityIdentity(entity.id, { name, avatarUrl: avatar_url, description, accentColor: accent_color, platform });
+    const { name, avatar_url, description, accent_color, platform, triggers, notify_on_mention, notify_on_trigger } = req.body;
+    registry.updateEntityIdentity(entity.id, {
+      name,
+      avatarUrl: avatar_url,
+      description,
+      accentColor: accent_color,
+      platform,
+      triggers: Array.isArray(triggers) ? triggers : undefined,
+      notifyOnMention: notify_on_mention !== undefined ? !!notify_on_mention : undefined,
+      notifyOnTrigger: notify_on_trigger !== undefined ? !!notify_on_trigger : undefined,
+    });
     // Re-stamp owner_name from current user (backfills old entities + handles username changes)
     registry.setEntityOwner(entity.id, entity.owner_id, req.user!.username);
     res.json({ success: true });

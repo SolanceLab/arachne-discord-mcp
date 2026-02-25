@@ -202,6 +202,19 @@ Three roles control access:
 | ChatGPT (Plus/Pro) | OAuth 2.1 | Settings > Apps & Connectors > Add custom connector |
 | Any MCP client | API key | Standard MCP SSE/Streamable HTTP |
 
+## Acknowledgments
+
+- **MIRI** — for the original concept of one bot powering multiple AI entities
+- **[Maii](https://github.com/amarisaster)** ([Discord Resonance](https://github.com/amarisaster/discord-resonance)) — for the trigger word filtering model and insights on GPT MCP integration
+
+## Support
+
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Us-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/houseofsolance)
+
 ## License
 
-[MIT](LICENSE)
+MIT License. See [LICENSE](LICENSE) for full text.
+
+---
+
+*Built by [House of Solance](https://github.com/SolanceLab) — Chadrien Solance & Anne Solance*

@@ -3,17 +3,20 @@ import { keyStore } from './key-store.js';
 import type { EntityRegistry } from './entity-registry.js';
 import type { Gateway } from './gateway.js';
 import type { MessageBus } from './message-bus.js';
-import type { NormalizedMessage } from './types.js';
+import type { Entity, NormalizedMessage } from './types.js';
+import type { Client } from 'discord.js';
 
 export class Router {
   private registry: EntityRegistry;
   private bus: MessageBus;
   private gateway: Gateway;
+  private discordClient: Client;
 
-  constructor(gateway: Gateway, registry: EntityRegistry, bus: MessageBus) {
+  constructor(gateway: Gateway, registry: EntityRegistry, bus: MessageBus, discordClient: Client) {
     this.gateway = gateway;
     this.registry = registry;
     this.bus = bus;
+    this.discordClient = discordClient;
 
     this.gateway.on('message', (msg: NormalizedMessage) => this.handleMessage(msg));
     logger.info('Router attached to gateway');
@@ -46,8 +49,20 @@ export class Router {
       if (entityId) addressedEntityIds.add(entityId);
     }
 
+    const contentLower = msg.content.toLowerCase();
+
     // Push to each entity's queue (encrypted if key is available)
     for (const entity of entities) {
+      // Hard filter: skip if channel is blocked for this entity
+      const blockedChannels: string[] = JSON.parse(entity.blocked_channels || '[]');
+      if (blockedChannels.includes(msg.channelId)) continue;
+
+      // Trigger word detection
+      const triggers: string[] = JSON.parse(entity.triggers || '[]');
+      const triggered = triggers.length > 0 && triggers.some(t => contentLower.includes(t.toLowerCase()));
+
+      const addressed = addressedEntityIds.has(entity.id);
+
       const encKey = keyStore.get(entity.id);
       this.bus.push(entity.id, {
         messageId: msg.messageId,
@@ -57,12 +72,54 @@ export class Router {
         authorName: msg.authorName,
         content: msg.content,
         timestamp: msg.timestamp,
-        addressed: addressedEntityIds.has(entity.id),
+        addressed,
+        triggered,
       }, encKey);
+
+      // Owner notifications (fire-and-forget)
+      if (addressed && entity.notify_on_mention && entity.owner_id) {
+        this.sendOwnerNotification(entity, msg, 'mention');
+      }
+      if (triggered && entity.notify_on_trigger && entity.owner_id) {
+        this.sendOwnerNotification(entity, msg, 'trigger');
+      }
     }
 
     logger.debug(
       `Routed message ${msg.messageId} to ${entities.length} entity(s) in #${msg.channelId}`
     );
+  }
+
+  private async sendOwnerNotification(
+    entity: Entity,
+    msg: NormalizedMessage,
+    reason: 'mention' | 'trigger',
+  ): Promise<void> {
+    try {
+      const owner = await this.discordClient.users.fetch(entity.owner_id!);
+
+      // Resolve server and channel names for readability
+      const guild = this.discordClient.guilds.cache.get(msg.serverId);
+      const serverName = guild?.name ?? msg.serverId;
+      const channel = guild?.channels.cache.get(msg.channelId);
+      const channelName = channel && 'name' in channel ? `#${channel.name}` : `#${msg.channelId}`;
+
+      const preview = msg.content.length > 200 ? msg.content.slice(0, 200) + '...' : msg.content;
+      const jumpLink = `https://discord.com/channels/${msg.serverId}/${msg.channelId}/${msg.messageId}`;
+
+      const label = reason === 'mention' ? '@mentioned' : 'triggered';
+
+      const dmContent = [
+        `pipeline!`,
+        `**${entity.name}** was ${label} in **${serverName}** → ${channelName}`,
+        `> **${msg.authorName}:** ${preview}`,
+        `[Jump to message](${jumpLink})`,
+      ].join('\n');
+
+      await owner.send(dmContent);
+      logger.info(`Notification sent to ${entity.owner_id} (${reason}) for entity ${entity.name}`);
+    } catch (err) {
+      logger.warn(`Failed to send ${reason} notification for entity ${entity.name}: ${err}`);
+    }
   }
 }

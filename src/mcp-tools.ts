@@ -43,16 +43,17 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
   // --- read_messages ---
   server.tool(
     'read_messages',
-    'Read recent messages from the queue for subscribed channels. Messages are held for 15 minutes after they arrive.',
+    'Read recent messages from the queue for subscribed channels. Messages are held for 15 minutes after they arrive. Use triggered_only to filter for messages that matched your trigger words.',
     {
       channel_id: z.string().optional().describe('Channel ID to read from. If omitted, reads from all subscribed channels.'),
       limit: z.number().optional().default(50).describe('Maximum number of messages to return (default 50)'),
+      triggered_only: z.boolean().optional().default(false).describe('If true, only return messages that matched one of your trigger words.'),
     },
-    async ({ channel_id, limit }) => {
+    async ({ channel_id, limit, triggered_only }) => {
       if (channel_id && !canAccessChannel(channel_id)) {
         return { content: [{ type: 'text' as const, text: 'Error: You do not have access to this channel.' }] };
       }
-      const messages = bus.read(entity.id, channel_id, limit, ctx.encryptionKey);
+      const messages = bus.read(entity.id, channel_id, limit, ctx.encryptionKey, triggered_only);
       return {
         content: [{ type: 'text' as const, text: JSON.stringify(messages, null, 2) }],
       };

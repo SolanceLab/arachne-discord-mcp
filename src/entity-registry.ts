@@ -80,6 +80,18 @@ export class EntityRegistry {
       this.db.exec("ALTER TABLE entities ADD COLUMN owner_name TEXT DEFAULT NULL");
       logger.info('Migration: added owner_name column to entities');
     }
+    if (!eCols.some(c => c.name === 'triggers')) {
+      this.db.exec("ALTER TABLE entities ADD COLUMN triggers TEXT DEFAULT '[]'");
+      logger.info('Migration: added triggers column to entities');
+    }
+    if (!eCols.some(c => c.name === 'notify_on_mention')) {
+      this.db.exec("ALTER TABLE entities ADD COLUMN notify_on_mention INTEGER DEFAULT 0");
+      logger.info('Migration: added notify_on_mention column to entities');
+    }
+    if (!eCols.some(c => c.name === 'notify_on_trigger')) {
+      this.db.exec("ALTER TABLE entities ADD COLUMN notify_on_trigger INTEGER DEFAULT 0");
+      logger.info('Migration: added notify_on_trigger column to entities');
+    }
 
     // Server settings table (per-server admin config)
     this.db.exec(`
@@ -326,13 +338,13 @@ export class EntityRegistry {
    * HOT PATH — called on every incoming message.
    * Find all active entities subscribed to a given server+channel.
    */
-  getEntitiesForChannel(serverId: string, channelId: string): Array<Entity & { channels: string; tools: string }> {
+  getEntitiesForChannel(serverId: string, channelId: string): Array<Entity & { channels: string; tools: string; blocked_channels: string }> {
     const rows = this.db.prepare(`
-      SELECT e.*, es.channels, es.tools
+      SELECT e.*, es.channels, es.tools, es.blocked_channels
       FROM entities e
       JOIN entity_servers es ON e.id = es.entity_id
       WHERE e.active = 1 AND es.server_id = ?
-    `).all(serverId) as Array<Entity & { channels: string; tools: string }>;
+    `).all(serverId) as Array<Entity & { channels: string; tools: string; blocked_channels: string }>;
 
     // Filter: entity sees this channel if channels array is empty (all) or includes channelId
     return rows.filter(row => {
@@ -371,18 +383,24 @@ export class EntityRegistry {
     description?: string | null;
     accentColor?: string | null;
     platform?: string | null;
+    triggers?: string[];
+    notifyOnMention?: boolean;
+    notifyOnTrigger?: boolean;
   }): boolean {
     const entity = this.getEntity(entityId);
     if (!entity) return false;
 
     this.db.prepare(
-      'UPDATE entities SET name = ?, avatar_url = ?, description = ?, accent_color = ?, platform = ? WHERE id = ?'
+      'UPDATE entities SET name = ?, avatar_url = ?, description = ?, accent_color = ?, platform = ?, triggers = ?, notify_on_mention = ?, notify_on_trigger = ? WHERE id = ?'
     ).run(
       fields.name ?? entity.name,
       fields.avatarUrl !== undefined ? fields.avatarUrl : entity.avatar_url,
       fields.description !== undefined ? fields.description : entity.description,
       fields.accentColor !== undefined ? fields.accentColor : entity.accent_color,
       fields.platform !== undefined ? fields.platform : entity.platform,
+      fields.triggers !== undefined ? JSON.stringify(fields.triggers) : entity.triggers,
+      fields.notifyOnMention !== undefined ? (fields.notifyOnMention ? 1 : 0) : entity.notify_on_mention,
+      fields.notifyOnTrigger !== undefined ? (fields.notifyOnTrigger ? 1 : 0) : entity.notify_on_trigger,
       entityId,
     );
     return true;

@@ -66,7 +66,7 @@ export class MessageBus {
    * Read messages from an entity's queue (does NOT remove them — TTL handles expiry).
    * If decryptionKey is provided, encrypted messages are decrypted before returning.
    */
-  read(entityId: string, channelId?: string, limit = 50, decryptionKey?: Buffer): ReadableMessage[] {
+  read(entityId: string, channelId?: string, limit = 50, decryptionKey?: Buffer, triggeredOnly?: boolean): ReadableMessage[] {
     const queue = this.queues.get(entityId);
     if (!queue) return [];
 
@@ -75,6 +75,10 @@ export class MessageBus {
 
     if (channelId) {
       messages = messages.filter(m => m.channelId === channelId);
+    }
+
+    if (triggeredOnly) {
+      messages = messages.filter(m => m.triggered);
     }
 
     // Most recent first, apply limit
@@ -101,6 +105,7 @@ export class MessageBus {
         content,
         timestamp: m.timestamp.toISOString(),
         addressed: m.addressed,
+        triggered: m.triggered,
       };
     });
   }
