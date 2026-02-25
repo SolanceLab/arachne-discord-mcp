@@ -1,8 +1,9 @@
 import Database from 'better-sqlite3';
+import crypto from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { generateApiKey, generateSalt, hashApiKey } from './crypto.js';
 import { logger } from './logger.js';
-import type { Entity, EntityServer, ServerRequest, ServerSettings, ServerTemplate } from './types.js';
+import type { Entity, EntityServer, ServerRequest, ServerSettings, ServerTemplate, OAuthAuthCode, OAuthAccessToken, OAuthRefreshToken, OAuthClient } from './types.js';
 
 export class EntityRegistry {
   private db: Database.Database;
@@ -127,6 +128,54 @@ export class EntityRegistry {
       );
       CREATE INDEX IF NOT EXISTS idx_server_templates_server
         ON server_templates(server_id);
+    `);
+
+    // OAuth 2.1 tables
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS oauth_auth_codes (
+        code              TEXT PRIMARY KEY,
+        entity_id         TEXT NOT NULL REFERENCES entities(id),
+        discord_user_id   TEXT NOT NULL,
+        client_id         TEXT NOT NULL,
+        code_challenge    TEXT NOT NULL,
+        code_challenge_method TEXT NOT NULL DEFAULT 'S256',
+        redirect_uri      TEXT NOT NULL,
+        scope             TEXT NOT NULL DEFAULT 'mcp',
+        created_at        TEXT DEFAULT (datetime('now')),
+        expires_at        TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS oauth_access_tokens (
+        jti               TEXT PRIMARY KEY,
+        entity_id         TEXT NOT NULL REFERENCES entities(id),
+        discord_user_id   TEXT NOT NULL,
+        client_id         TEXT NOT NULL,
+        scope             TEXT NOT NULL DEFAULT 'mcp',
+        issued_at         TEXT DEFAULT (datetime('now')),
+        expires_at        TEXT NOT NULL,
+        revoked           INTEGER DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS oauth_clients (
+        client_id                  TEXT PRIMARY KEY,
+        client_name                TEXT,
+        redirect_uris              TEXT NOT NULL DEFAULT '[]',
+        grant_types                TEXT NOT NULL DEFAULT '["authorization_code"]',
+        response_types             TEXT NOT NULL DEFAULT '["code"]',
+        token_endpoint_auth_method TEXT NOT NULL DEFAULT 'none',
+        created_at                 TEXT DEFAULT (datetime('now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS oauth_refresh_tokens (
+        token             TEXT PRIMARY KEY,
+        entity_id         TEXT NOT NULL REFERENCES entities(id),
+        discord_user_id   TEXT NOT NULL,
+        client_id         TEXT NOT NULL,
+        access_token_jti  TEXT NOT NULL,
+        created_at        TEXT DEFAULT (datetime('now')),
+        expires_at        TEXT NOT NULL,
+        revoked           INTEGER DEFAULT 0
+      );
     `);
 
     logger.info('Entity registry initialized');
@@ -504,6 +553,82 @@ export class EntityRegistry {
     this.db.prepare('DELETE FROM server_requests WHERE entity_id = ?').run(entityId);
     const result = this.db.prepare('DELETE FROM entities WHERE id = ?').run(entityId);
     return result.changes > 0;
+  }
+
+  // --- OAuth 2.1 ---
+
+  createAuthCode(
+    entityId: string, discordUserId: string, clientId: string,
+    codeChallenge: string, redirectUri: string, scope: string = 'mcp'
+  ): OAuthAuthCode {
+    const code = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
+    this.db.prepare(`
+      INSERT INTO oauth_auth_codes (code, entity_id, discord_user_id, client_id, code_challenge, code_challenge_method, redirect_uri, scope, expires_at)
+      VALUES (?, ?, ?, ?, ?, 'S256', ?, ?, ?)
+    `).run(code, entityId, discordUserId, clientId, codeChallenge, redirectUri, scope, expiresAt);
+    return this.db.prepare('SELECT * FROM oauth_auth_codes WHERE code = ?').get(code) as OAuthAuthCode;
+  }
+
+  consumeAuthCode(code: string): OAuthAuthCode | null {
+    const row = this.db.prepare('SELECT * FROM oauth_auth_codes WHERE code = ?').get(code) as OAuthAuthCode | null;
+    if (!row) return null;
+    this.db.prepare('DELETE FROM oauth_auth_codes WHERE code = ?').run(code);
+    if (new Date(row.expires_at) < new Date()) return null;
+    return row;
+  }
+
+  createAccessToken(jti: string, entityId: string, discordUserId: string, clientId: string, scope: string, expiresAt: string): void {
+    this.db.prepare(`
+      INSERT INTO oauth_access_tokens (jti, entity_id, discord_user_id, client_id, scope, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(jti, entityId, discordUserId, clientId, scope, expiresAt);
+  }
+
+  isAccessTokenRevoked(jti: string): boolean {
+    const row = this.db.prepare('SELECT revoked FROM oauth_access_tokens WHERE jti = ?').get(jti) as { revoked: number } | null;
+    return row?.revoked === 1;
+  }
+
+  revokeAccessToken(jti: string): void {
+    this.db.prepare('UPDATE oauth_access_tokens SET revoked = 1 WHERE jti = ?').run(jti);
+  }
+
+  createRefreshToken(entityId: string, discordUserId: string, clientId: string, accessTokenJti: string): OAuthRefreshToken {
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+    this.db.prepare(`
+      INSERT INTO oauth_refresh_tokens (token, entity_id, discord_user_id, client_id, access_token_jti, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(token, entityId, discordUserId, clientId, accessTokenJti, expiresAt);
+    return this.db.prepare('SELECT * FROM oauth_refresh_tokens WHERE token = ?').get(token) as OAuthRefreshToken;
+  }
+
+  registerOAuthClient(
+    clientName: string | null,
+    redirectUris: string[],
+    grantTypes: string[] = ['authorization_code'],
+    responseTypes: string[] = ['code'],
+    tokenEndpointAuthMethod: string = 'none',
+  ): OAuthClient {
+    const clientId = uuidv4();
+    this.db.prepare(`
+      INSERT INTO oauth_clients (client_id, client_name, redirect_uris, grant_types, response_types, token_endpoint_auth_method)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(clientId, clientName, JSON.stringify(redirectUris), JSON.stringify(grantTypes), JSON.stringify(responseTypes), tokenEndpointAuthMethod);
+    return this.db.prepare('SELECT * FROM oauth_clients WHERE client_id = ?').get(clientId) as OAuthClient;
+  }
+
+  getOAuthClient(clientId: string): OAuthClient | null {
+    return this.db.prepare('SELECT * FROM oauth_clients WHERE client_id = ?').get(clientId) as OAuthClient | null;
+  }
+
+  consumeRefreshToken(token: string): OAuthRefreshToken | null {
+    const row = this.db.prepare('SELECT * FROM oauth_refresh_tokens WHERE token = ?').get(token) as OAuthRefreshToken | null;
+    if (!row || row.revoked === 1) return null;
+    this.db.prepare('DELETE FROM oauth_refresh_tokens WHERE token = ?').run(token);
+    if (new Date(row.expires_at) < new Date()) return null;
+    return row;
   }
 
   close() {

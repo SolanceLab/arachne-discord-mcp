@@ -25,7 +25,7 @@ export default function Callback() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-danger mb-4">{error}</p>
-          <a href="/login" className="text-accent hover:text-accent-hover">Back to login</a>
+          <a href="/" className="text-accent hover:text-accent-hover">Back to home</a>
         </div>
       </div>
     );

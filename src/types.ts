@@ -125,3 +125,62 @@ export interface JWTPayload {
   iat: number;
   exp: number;
 }
+
+// --- OAuth 2.1 ---
+
+export interface OAuthAuthCode {
+  code: string;
+  entity_id: string;
+  discord_user_id: string;
+  client_id: string;
+  code_challenge: string;
+  code_challenge_method: string;
+  redirect_uri: string;
+  scope: string;
+  created_at: string;
+  expires_at: string;
+}
+
+export interface OAuthAccessToken {
+  jti: string;
+  entity_id: string;
+  discord_user_id: string;
+  client_id: string;
+  scope: string;
+  issued_at: string;
+  expires_at: string;
+  revoked: number;
+}
+
+export interface OAuthRefreshToken {
+  token: string;
+  entity_id: string;
+  discord_user_id: string;
+  client_id: string;
+  access_token_jti: string;
+  created_at: string;
+  expires_at: string;
+  revoked: number;
+}
+
+export interface OAuthClient {
+  client_id: string;
+  client_name: string | null;
+  redirect_uris: string;        // JSON array
+  grant_types: string;           // JSON array
+  response_types: string;        // JSON array
+  token_endpoint_auth_method: string;
+  created_at: string;
+}
+
+export interface OAuthJWTPayload {
+  iss: string;       // "https://arachne-discord.fly.dev"
+  sub: string;       // Discord user ID
+  aud: string;       // "https://arachne-discord.fly.dev/mcp/{entity_id}"
+  exp: number;
+  iat: number;
+  jti: string;
+  scope: string;     // "mcp"
+  entity_id: string;
+  client_id: string;
+}

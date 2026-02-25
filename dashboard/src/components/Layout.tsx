@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Layout() {
@@ -19,7 +19,7 @@ export default function Layout() {
       {/* Top bar */}
       <header className="bg-bg-surface border-b border-border px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <h1 className="text-lg font-semibold text-accent">The Loom</h1>
+          <Link to="/" className="text-lg font-semibold text-accent hover:text-accent-hover transition-colors">The Loom</Link>
           <nav className="flex gap-1">
             {navItems.filter(n => n.show).map(n => (
               <NavLink

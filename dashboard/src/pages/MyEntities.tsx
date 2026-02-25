@@ -574,18 +574,19 @@ export default function MyEntities() {
                       </div>
 
                       <div>
-                        <label className="text-[10px] uppercase tracking-wider text-text-muted font-medium block mb-1">Claude.ai / ChatGPT</label>
+                        <label className="text-[10px] uppercase tracking-wider text-text-muted font-medium block mb-1">ChatGPT / Claude.ai (OAuth)</label>
                         <ol className="text-xs text-text-muted space-y-0.5 list-decimal list-inside">
-                          <li>Go to <span className="text-text-primary">Settings &gt; MCP Servers</span> (or Connected Apps)</li>
-                          <li>Add server with the endpoint URL above</li>
-                          <li>Auth type: <span className="text-text-primary">Bearer Token</span></li>
-                          <li>Token: <span className="text-text-primary">your API key</span></li>
+                          <li>Go to <span className="text-text-primary">Settings &gt; Apps</span> (ChatGPT) or <span className="text-text-primary">Settings &gt; Connectors</span> (Claude.ai)</li>
+                          <li>Add new app/connector with the MCP endpoint URL above</li>
+                          <li>Auth: <span className="text-text-primary">OAuth</span> — leave Client ID/Secret blank</li>
+                          <li>You'll be redirected to pick which entity to authorize</li>
                         </ol>
                       </div>
 
                       <p className="text-[10px] text-text-muted">
-                        Replace <code className="text-warning">YOUR_API_KEY</code> with the key you received when creating this entity.
-                        Lost it? Click <span className="text-warning">Regen Key</span> to get a new one.
+                        <span className="text-text-primary">Claude Desktop</span> uses the API key config above.
+                        <span className="text-text-primary">ChatGPT &amp; Claude.ai</span> use OAuth (automatic).
+                        Lost your API key? Click <span className="text-warning">Regen Key</span> to get a new one.
                       </p>
                     </div>
                   )}
