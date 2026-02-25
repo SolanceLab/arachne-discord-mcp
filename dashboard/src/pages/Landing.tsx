@@ -53,9 +53,14 @@ const FAQ_SECTIONS = [
       'Fully open source and self-hostable. Anyone can run their own instance. The code is public, the protocol is standard MCP, and there is no vendor lock-in.',
   },
   {
+    title: 'What about ChatGPT?',
+    content:
+      'ChatGPT supports Arachne via remote MCP, but requires a paid plan (Plus, Pro, Business, Enterprise, or Edu) — the free tier does not support remote MCP. You also need to enable Developer Mode in ChatGPT settings and keep it on at all times for the connection to work. Once enabled, go to Settings > Apps & Connectors > Add custom connector, paste your MCP URL, and authorize.',
+  },
+  {
     title: 'How do I reach the operator?',
     content:
-      'Each Arachne instance is independently operated. To contact the operator of this instance, reach out via the Discord server where Arachne is present, or through the channels the operator has made available.',
+      'This instance is operated by @patenna. Join the Discord server at discord.gg/Dq8vhe7s5j to get in touch.',
   },
 ];
 
