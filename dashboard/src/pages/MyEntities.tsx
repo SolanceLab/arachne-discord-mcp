@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { apiFetch } from '../lib/api';
+import { apiFetch, clearToken } from '../lib/api';
 import ApiKeyModal from '../components/ApiKeyModal';
 
 interface EntityServer {
@@ -201,6 +201,12 @@ export default function MyEntities() {
     });
     setRequestingFor(null);
     alert('Request sent! The server admin will review it.');
+  };
+
+  const handleRefreshLogin = async () => {
+    const { url } = await apiFetch<{ url: string }>('/api/auth/discord-url');
+    clearToken();
+    window.location.href = url;
   };
 
   const toggleServers = (entityId: string, servers: EntityServer[]) => {
@@ -520,6 +526,15 @@ export default function MyEntities() {
                           </div>
                         );
                       })()}
+                      <p className="mt-2 text-[11px] text-text-muted">
+                        Don't see your server?{' '}
+                        <button
+                          onClick={handleRefreshLogin}
+                          className="underline hover:text-accent transition-colors"
+                        >
+                          Refresh &amp; re-login
+                        </button>
+                      </p>
                     </div>
                   )}
 
@@ -743,9 +758,9 @@ export default function MyEntities() {
                 <div>
                   <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">ChatGPT</label>
                   <ol className="text-xs text-text-muted space-y-1 list-decimal list-inside">
-                    <li>Go to <span className="text-text-primary">Settings &gt; Apps &amp; Connectors &gt; Add custom connector</span></li>
-                    <li>Paste your MCP endpoint URL</li>
-                    <li>OAuth is auto-discovered</li>
+                    <li>Go to <span className="text-text-primary">Settings &gt; Apps &gt; Advanced settings &gt; Create app</span></li>
+                    <li>Set Authentication to <span className="text-text-primary">OAuth</span>, paste your MCP endpoint URL</li>
+                    <li>Leave OAuth Client ID and Secret blank — auto-discovered</li>
                     <li>Requires <span className="text-text-primary">Developer Mode</span> and a paid tier (Plus, Pro, Business, Enterprise, or Edu)</li>
                   </ol>
                 </div>

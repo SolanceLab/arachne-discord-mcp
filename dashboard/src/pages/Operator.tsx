@@ -28,10 +28,17 @@ interface Server {
   member_count: number;
 }
 
+interface BannedServer {
+  server_id: string;
+  server_name: string | null;
+  banned_at: string;
+}
+
 export default function Operator() {
   const { user } = useAuth();
   const [entities, setEntities] = useState<FullEntity[]>([]);
   const [servers, setServers] = useState<Server[]>([]);
+  const [bannedServers, setBannedServers] = useState<BannedServer[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiKey, setApiKey] = useState<string | null>(null);
 
@@ -59,9 +66,11 @@ export default function Operator() {
     Promise.all([
       apiFetch<FullEntity[]>('/api/operator/entities'),
       apiFetch<Server[]>('/api/operator/servers'),
-    ]).then(([e, s]) => {
+      apiFetch<BannedServer[]>('/api/operator/banned-servers'),
+    ]).then(([e, s, b]) => {
       setEntities(e);
       setServers(s);
+      setBannedServers(b);
     }).finally(() => setLoading(false));
   }, [isOperator, refreshKey]);
 
@@ -111,6 +120,23 @@ export default function Operator() {
     setAddServerId('');
     setAddChannels('');
     setAddAnnounce('');
+    refresh();
+  };
+
+  const handleKickServer = async (serverId: string, serverName: string) => {
+    if (!confirm(`Remove "${serverName}"? Arachne will leave this server. It can be re-invited later.`)) return;
+    await apiFetch(`/api/operator/servers/${serverId}`, { method: 'DELETE' });
+    refresh();
+  };
+
+  const handleBanServer = async (serverId: string, serverName: string) => {
+    if (!confirm(`Blacklist "${serverName}"? Arachne will leave and automatically reject any future invites from this server.`)) return;
+    await apiFetch(`/api/operator/servers/${serverId}?ban=true`, { method: 'DELETE' });
+    refresh();
+  };
+
+  const handleUnbanServer = async (serverId: string) => {
+    await apiFetch(`/api/operator/servers/${serverId}/ban`, { method: 'DELETE' });
     refresh();
   };
 
@@ -173,11 +199,28 @@ export default function Operator() {
         <h3 className="text-sm font-medium text-text-muted mb-2">
           Bot present in {servers.length} server{servers.length !== 1 ? 's' : ''}
         </h3>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           {servers.map(s => (
-            <span key={s.id} className="px-2 py-1 bg-bg-card border border-border rounded text-xs text-text-muted">
-              {s.name} ({s.member_count})
-            </span>
+            <div key={s.id} className="bg-bg-card border border-border rounded-lg px-4 py-3 min-w-[160px]">
+              <div className="text-sm font-medium mb-1">{s.name}</div>
+              <div className="text-xs text-text-muted mb-3">
+                {entities.filter(e => e.servers.some(es => es.server_id === s.id)).length} entities
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleKickServer(s.id, s.name)}
+                  className="flex-1 px-3 py-1.5 text-xs bg-bg-surface hover:bg-warning/20 text-warning border border-border rounded transition-colors"
+                >
+                  Remove
+                </button>
+                <button
+                  onClick={() => handleBanServer(s.id, s.name)}
+                  className="flex-1 px-3 py-1.5 text-xs bg-bg-surface hover:bg-danger/20 text-danger border border-border rounded transition-colors"
+                >
+                  Blacklist
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -301,6 +344,29 @@ export default function Operator() {
           </div>
         ))}
       </div>
+
+      {/* Banned servers */}
+      {bannedServers.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-sm font-medium text-text-muted mb-2">
+            Blacklisted servers ({bannedServers.length})
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {bannedServers.map(b => (
+              <span key={b.server_id} className="inline-flex items-center gap-1.5 px-2 py-1 bg-danger/10 border border-danger/20 rounded text-xs text-danger">
+                {b.server_name ? `${b.server_name} (${b.server_id})` : b.server_id}
+                <button
+                  onClick={() => handleUnbanServer(b.server_id)}
+                  className="text-danger/50 hover:text-text-primary transition-colors"
+                  title="Unban"
+                >
+                  &times;
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {apiKey && <ApiKeyModal apiKey={apiKey} onClose={() => setApiKey(null)} />}
     </div>

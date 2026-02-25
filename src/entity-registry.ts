@@ -143,6 +143,21 @@ export class EntityRegistry {
         ON server_templates(server_id);
     `);
 
+    // Banned servers table (operator can ban servers so bot auto-leaves on rejoin)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS banned_servers (
+        server_id    TEXT PRIMARY KEY,
+        server_name  TEXT,
+        banned_at    TEXT DEFAULT (datetime('now'))
+      );
+    `);
+
+    // Migration: add server_name column if missing
+    const bannedCols = this.db.prepare("PRAGMA table_info(banned_servers)").all() as Array<{ name: string }>;
+    if (!bannedCols.some(c => c.name === 'server_name')) {
+      this.db.exec("ALTER TABLE banned_servers ADD COLUMN server_name TEXT");
+    }
+
     // OAuth 2.1 tables
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS oauth_auth_codes (
@@ -658,6 +673,31 @@ export class EntityRegistry {
     this.db.prepare('DELETE FROM oauth_refresh_tokens WHERE token = ?').run(token);
     if (new Date(row.expires_at) < new Date()) return null;
     return row;
+  }
+
+  // --- Server Bans ---
+
+  banServer(serverId: string, serverName?: string): void {
+    this.db.prepare('INSERT OR IGNORE INTO banned_servers (server_id, server_name) VALUES (?, ?)').run(serverId, serverName || null);
+    logger.info(`Server banned: ${serverName || serverId}`);
+  }
+
+  unbanServer(serverId: string): boolean {
+    const result = this.db.prepare('DELETE FROM banned_servers WHERE server_id = ?').run(serverId);
+    if (result.changes > 0) {
+      logger.info(`Server unbanned: ${serverId}`);
+      return true;
+    }
+    return false;
+  }
+
+  isServerBanned(serverId: string): boolean {
+    const row = this.db.prepare('SELECT 1 FROM banned_servers WHERE server_id = ?').get(serverId);
+    return !!row;
+  }
+
+  listBannedServers(): Array<{ server_id: string; server_name: string | null; banned_at: string }> {
+    return this.db.prepare('SELECT * FROM banned_servers ORDER BY banned_at DESC').all() as Array<{ server_id: string; server_name: string | null; banned_at: string }>;
   }
 
   close() {

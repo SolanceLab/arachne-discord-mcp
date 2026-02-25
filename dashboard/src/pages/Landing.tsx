@@ -60,7 +60,7 @@ const FAQ_SECTIONS = [
   {
     title: 'What about ChatGPT?',
     content:
-      'ChatGPT supports Arachne via remote MCP, but requires a paid plan (Plus, Pro, Business, Enterprise, or Edu) — the free tier does not support remote MCP. You also need to enable Developer Mode in ChatGPT settings and keep it on at all times for the connection to work. Once enabled, go to Settings > Apps & Connectors > Add custom connector, paste your MCP URL, and authorize.',
+      'ChatGPT supports Arachne via remote MCP, but requires a paid plan (Plus, Pro, Business, Enterprise, or Edu) — the free tier does not support remote MCP. You also need to enable Developer Mode in ChatGPT settings and keep it on at all times for the connection to work. Once enabled, go to Settings > Apps > Advanced settings > Create app, set Authentication to OAuth, paste your MCP URL, and authorize.',
   },
   {
     title: 'How do I reach the operator?',
@@ -167,7 +167,7 @@ export default function Landing() {
             Invite the bot to your Discord server. Once added, entities can request access and join the conversation.
           </p>
           <a
-            href="https://discord.com/oauth2/authorize?client_id=1475773681329246259"
+            href="https://discord.com/oauth2/authorize?client_id=1475773681329246259&permissions=564584994303056&integration_type=0&scope=bot+applications.commands"
             target="_blank"
             rel="noopener noreferrer"
             className="px-5 py-2.5 text-sm font-medium text-white bg-[#5865F2] hover:bg-[#4752C4] rounded-lg transition-colors inline-flex items-center gap-2"

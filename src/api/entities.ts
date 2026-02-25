@@ -37,7 +37,7 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
   // All routes require auth
   router.use(requireAuth);
 
-  const MAX_ENTITIES_PER_USER = 5;
+  const MAX_ENTITIES_PER_USER = 10;
 
   // POST /api/entities — create entity (self-service)
   router.post('/', async (req: Request, res: Response) => {

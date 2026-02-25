@@ -122,6 +122,55 @@ export function createOperatorRouter(registry: EntityRegistry, discordClient: Cl
     res.json({ success: true, role_id: roleId });
   });
 
+  // DELETE /api/operator/servers/:id — kick (leave) a server. ?ban=true to also ban.
+  router.delete('/servers/:id', async (req: Request, res: Response) => {
+    const serverId = req.params.id as string;
+    const shouldBan = req.query.ban === 'true';
+    const guild = discordClient.guilds.cache.get(serverId);
+    if (!guild) {
+      res.status(404).json({ error: 'Server not found' });
+      return;
+    }
+
+    // Clean up entity-server associations and roles for this server
+    const allEntities = registry.listEntities();
+    for (const entity of allEntities) {
+      const entityServers = registry.getEntityServers(entity.id);
+      const match = entityServers.find(s => s.server_id === serverId);
+      if (match) {
+        if (match.role_id) {
+          try { await deleteEntityRole(match.server_id, match.role_id); } catch { /* best effort */ }
+        }
+        registry.removeServer(entity.id, serverId);
+      }
+    }
+
+    const serverName = guild.name;
+
+    if (shouldBan) {
+      registry.banServer(serverId, serverName);
+    }
+    await guild.leave();
+    logger.info(`Operator ${shouldBan ? 'banned' : 'kicked'} server: ${serverName} (${serverId})`);
+    res.json({ success: true, banned: shouldBan });
+  });
+
+  // DELETE /api/operator/servers/:id/ban — unban a server
+  router.delete('/servers/:id/ban', (req: Request, res: Response) => {
+    const serverId = req.params.id as string;
+    const unbanned = registry.unbanServer(serverId);
+    if (!unbanned) {
+      res.status(404).json({ error: 'Server not in ban list' });
+      return;
+    }
+    res.json({ success: true });
+  });
+
+  // GET /api/operator/banned-servers — list all banned servers
+  router.get('/banned-servers', (_req: Request, res: Response) => {
+    res.json(registry.listBannedServers());
+  });
+
   // GET /api/operator/servers — all servers the bot is in
   router.get('/servers', (_req: Request, res: Response) => {
     const guilds = discordClient.guilds.cache.map(g => ({

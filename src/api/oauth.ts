@@ -125,6 +125,14 @@ export function createOAuthRouter(registry: EntityRegistry, _discordClient: Clie
       return;
     }
 
+    // Extract entity hint from resource parameter (RFC 8707)
+    let entityHint: string | null = null;
+    const resource = _req.query.resource as string | undefined;
+    if (resource) {
+      const match = resource.match(/\/mcp\/([a-f0-9-]+)/);
+      if (match) entityHint = match[1];
+    }
+
     // Bundle all OAuth params into state for the Discord redirect
     const oauthParams = {
       client_id: client_id as string,
@@ -132,6 +140,7 @@ export function createOAuthRouter(registry: EntityRegistry, _discordClient: Clie
       scope: (scope as string) || 'mcp',
       state: (state as string) || '',
       code_challenge: code_challenge as string,
+      entity_hint: entityHint,
     };
     const tempState = Buffer.from(JSON.stringify(oauthParams)).toString('base64url');
 
@@ -157,7 +166,7 @@ export function createOAuthRouter(registry: EntityRegistry, _discordClient: Clie
       return;
     }
 
-    let oauthParams: { client_id: string; redirect_uri: string; scope: string; state: string; code_challenge: string };
+    let oauthParams: { client_id: string; redirect_uri: string; scope: string; state: string; code_challenge: string; entity_hint?: string | null };
     try {
       oauthParams = JSON.parse(Buffer.from(state as string, 'base64url').toString());
     } catch {
@@ -175,10 +184,20 @@ export function createOAuthRouter(registry: EntityRegistry, _discordClient: Clie
       const tokenData = await exchangeOAuthCode(code as string, discordRedirectUri, DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET);
       const user = await getDiscordUser(tokenData.access_token);
 
-      const entities = registry.getEntitiesByOwner(user.id);
+      let entities = registry.getEntitiesByOwner(user.id);
       if (entities.length === 0) {
         res.status(403).send(renderErrorPage('No Entities', 'You don\'t own any entities yet. Create one at The Loom first.'));
         return;
+      }
+
+      // If entity hint from MCP URL, scope consent to that entity only
+      if (oauthParams.entity_hint) {
+        const hinted = entities.filter(e => e.id === oauthParams.entity_hint);
+        if (hinted.length === 0) {
+          res.status(403).send(renderErrorPage('Not Your Entity', 'You don\'t own the entity this MCP endpoint belongs to.'));
+          return;
+        }
+        entities = hinted;
       }
 
       res.send(renderConsentPage(user, entities, oauthParams));

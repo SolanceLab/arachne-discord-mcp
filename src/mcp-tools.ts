@@ -22,22 +22,27 @@ function friendlyError(err: unknown): string {
 export function registerTools(server: McpServer, ctx: EntityContext): void {
   const { entity, entityServers, bus, webhookManager, discordClient } = ctx;
 
-  // Compute allowed channel IDs across all servers (empty = all)
+  // Compute per-server access: servers with [] = all channels, others = specific channels only
+  const allAccessServerIds = new Set<string>();
   const allowedChannels = new Set<string>();
-  let hasAllAccess = false;
   for (const es of entityServers) {
     const channels: string[] = JSON.parse(es.channels);
     if (channels.length === 0) {
-      hasAllAccess = true;
-      break;
+      allAccessServerIds.add(es.server_id);
+    } else {
+      channels.forEach(ch => allowedChannels.add(ch));
     }
-    channels.forEach(ch => allowedChannels.add(ch));
   }
 
   const allowedServerIds = new Set(entityServers.map(es => es.server_id));
 
   function canAccessChannel(channelId: string): boolean {
-    return hasAllAccess || allowedChannels.has(channelId);
+    // If this specific channel is whitelisted, allow
+    if (allowedChannels.has(channelId)) return true;
+    // Otherwise check if the channel's server has all-access
+    const channel = discordClient.channels.cache.get(channelId);
+    if (!channel || !('guildId' in channel) || !channel.guildId) return false;
+    return allAccessServerIds.has(channel.guildId);
   }
 
   // --- read_messages ---
@@ -344,13 +349,31 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
   // --- send_dm ---
   server.tool(
     'send_dm',
-    'Send a direct message to a Discord user. Note: the DM comes from the Arachne bot, not this entity\'s webhook persona.',
+    'Send a direct message to a Discord user. The user must share a server with this entity. Note: the DM comes from the Arachne bot, not this entity\'s webhook persona.',
     {
       user_id: z.string().describe('The Discord user ID to DM'),
       content: z.string().describe('The message content to send'),
     },
     async ({ user_id, content }) => {
       try {
+        // Verify user shares a mutual server with this entity
+        let isMutual = false;
+        for (const serverId of allowedServerIds) {
+          const guild = discordClient.guilds.cache.get(serverId);
+          if (guild) {
+            try {
+              await guild.members.fetch(user_id);
+              isMutual = true;
+              break;
+            } catch {
+              // User not in this guild, try next
+            }
+          }
+        }
+        if (!isMutual) {
+          return { content: [{ type: 'text' as const, text: 'Error: Cannot DM this user — they do not share a server with this entity.' }] };
+        }
+
         const user = await discordClient.users.fetch(user_id);
         const msg = await user.send(content);
         return {

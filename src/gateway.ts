@@ -54,6 +54,11 @@ export class Gateway extends EventEmitter {
       this.emit('message', normalized);
     });
 
+    this.client.on(Events.GuildCreate, (guild) => {
+      logger.info(`Joined server: ${guild.name} (${guild.id})`);
+      this.emit('guildCreate', guild);
+    });
+
     this.client.on(Events.Error, (error) => {
       logger.error(`Discord error: ${error.message}`);
     });

@@ -5,6 +5,7 @@ const WEBHOOK_NAME = 'Arachne';
 
 export class WebhookManager {
   private cache: Map<string, Webhook> = new Map();
+  private pending: Map<string, Promise<Webhook>> = new Map();
   private client: Client;
 
   constructor(client: Client) {
@@ -13,12 +14,27 @@ export class WebhookManager {
 
   /**
    * Get or create a webhook for a channel.
+   * Uses a pending-promise map to prevent duplicate webhook creation from concurrent requests.
    */
   private async getWebhook(channelId: string): Promise<Webhook> {
     // Check cache
     const cached = this.cache.get(channelId);
     if (cached) return cached;
 
+    // If another request is already fetching/creating for this channel, wait on it
+    const inflight = this.pending.get(channelId);
+    if (inflight) return inflight;
+
+    const promise = this.resolveWebhook(channelId);
+    this.pending.set(channelId, promise);
+    try {
+      return await promise;
+    } finally {
+      this.pending.delete(channelId);
+    }
+  }
+
+  private async resolveWebhook(channelId: string): Promise<Webhook> {
     const channel = await this.client.channels.fetch(channelId);
     if (!channel || !('fetchWebhooks' in channel)) {
       throw new Error(`Channel ${channelId} not found or doesn't support webhooks`);

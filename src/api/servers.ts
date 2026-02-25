@@ -16,7 +16,7 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
     const user = req.user!;
     const memberSet = new Set(user.member_guilds || []);
     const guilds = discordClient.guilds.cache
-      .filter(g => user.is_operator || memberSet.has(g.id))
+      .filter(g => memberSet.has(g.id))
       .map(g => ({
         id: g.id,
         name: g.name,

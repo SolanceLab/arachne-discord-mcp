@@ -41,6 +41,14 @@ async function main() {
   // Initialize router (gateway → entity queues)
   const _router = new Router(gateway, registry, bus, gateway.discordClient);
 
+  // Auto-leave banned servers on rejoin
+  gateway.on('guildCreate', async (guild: { id: string; name: string; leave: () => Promise<void> }) => {
+    if (registry.isServerBanned(guild.id)) {
+      logger.info(`Banned server rejoined — auto-leaving: ${guild.name} (${guild.id})`);
+      await guild.leave();
+    }
+  });
+
   // Initialize webhook manager
   const webhookManager = new WebhookManager(gateway.discordClient);
 
