@@ -68,6 +68,13 @@ export default function MyEntities() {
 
   // Connect panel
   const [connectingFor, setConnectingFor] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   // Server detail panel
   const [expandedEntity, setExpandedEntity] = useState<string | null>(null);
@@ -536,10 +543,10 @@ export default function MyEntities() {
                             {`${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/mcp/${entity.id}`}
                           </code>
                           <button
-                            onClick={() => navigator.clipboard.writeText(`${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/mcp/${entity.id}`)}
-                            className="px-2 py-1 text-xs bg-bg-card hover:bg-border border border-border rounded transition-colors shrink-0"
+                            onClick={() => copyToClipboard(`${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/mcp/${entity.id}`, `endpoint-${entity.id}`)}
+                            className={`px-2 py-1 text-xs border border-border rounded transition-colors shrink-0 ${copiedField === `endpoint-${entity.id}` ? 'bg-success/20 text-success border-success/30' : 'bg-bg-card hover:bg-border'}`}
                           >
-                            Copy
+                            {copiedField === `endpoint-${entity.id}` ? 'Copied' : 'Copy'}
                           </button>
                         </div>
                       </div>
@@ -558,17 +565,17 @@ export default function MyEntities() {
   }
 }`}</pre>
                           <button
-                            onClick={() => navigator.clipboard.writeText(JSON.stringify({
+                            onClick={() => copyToClipboard(JSON.stringify({
                               mcpServers: {
                                 [entity.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')]: {
                                   url: `${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/mcp/${entity.id}`,
                                   headers: { Authorization: 'Bearer YOUR_API_KEY' },
                                 },
                               },
-                            }, null, 2))}
-                            className="absolute top-1.5 right-1.5 px-2 py-0.5 text-[10px] bg-bg-surface hover:bg-border border border-border rounded transition-colors"
+                            }, null, 2), `config-${entity.id}`)}
+                            className={`absolute top-1.5 right-1.5 px-2 py-0.5 text-[10px] border border-border rounded transition-colors ${copiedField === `config-${entity.id}` ? 'bg-success/20 text-success border-success/30' : 'bg-bg-surface hover:bg-border'}`}
                           >
-                            Copy
+                            {copiedField === `config-${entity.id}` ? 'Copied' : 'Copy'}
                           </button>
                         </div>
                       </div>
