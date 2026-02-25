@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 const TOOL_GROUPS = [
   {
     label: 'Messaging',
@@ -41,6 +43,8 @@ const TOOL_GROUPS = [
   },
 ];
 
+const ALL_TOOLS = TOOL_GROUPS.flatMap(g => g.tools);
+
 interface ToolPickerProps {
   selected: string[];
   onChange: (tools: string[]) => void;
@@ -48,15 +52,27 @@ interface ToolPickerProps {
 }
 
 export default function ToolPicker({ selected, onChange, label = 'Tool whitelist' }: ToolPickerProps) {
+  const [allMode, setAllMode] = useState(selected.length === 0);
+
   const toggleTool = (tool: string) => {
+    if (allMode) {
+      setAllMode(false);
+      onChange(ALL_TOOLS.filter(t => t !== tool));
+      return;
+    }
+    let next: string[];
     if (selected.includes(tool)) {
-      onChange(selected.filter(t => t !== tool));
+      next = selected.filter(t => t !== tool);
     } else {
-      onChange([...selected, tool]);
+      next = [...selected, tool];
+    }
+    if (next.length >= ALL_TOOLS.length) {
+      setAllMode(true);
+      onChange([]);
+    } else {
+      onChange(next);
     }
   };
-
-  const allToolsMode = selected.length === 0;
 
   return (
     <div>
@@ -64,36 +80,41 @@ export default function ToolPicker({ selected, onChange, label = 'Tool whitelist
       <label className="flex items-center gap-2 mb-2 cursor-pointer">
         <input
           type="checkbox"
-          checked={allToolsMode}
-          onChange={() => onChange(allToolsMode ? ['read_messages'] : [])}
+          checked={allMode}
+          onChange={() => {
+            if (allMode) {
+              setAllMode(false);
+            } else {
+              setAllMode(true);
+              onChange([]);
+            }
+          }}
           className="rounded border-border"
         />
         <span className="text-sm">All tools</span>
       </label>
-      {!allToolsMode && (
-        <div className="border border-border rounded p-2 bg-bg-card space-y-2">
-          {TOOL_GROUPS.map(group => (
-            <div key={group.label}>
-              <p className="text-[10px] uppercase tracking-wider text-text-muted font-medium mb-1">
-                {group.label}
-              </p>
-              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mb-1.5">
-                {group.tools.map(tool => (
-                  <label key={tool} className="flex items-center gap-2 cursor-pointer py-0.5">
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(tool)}
-                      onChange={() => toggleTool(tool)}
-                      className="rounded border-border"
-                    />
-                    <span className="text-xs text-text-primary">{tool}</span>
-                  </label>
-                ))}
-              </div>
+      <div className="border border-border rounded p-2 bg-bg-card space-y-2">
+        {TOOL_GROUPS.map(group => (
+          <div key={group.label}>
+            <p className="text-[10px] uppercase tracking-wider text-text-muted font-medium mb-1">
+              {group.label}
+            </p>
+            <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mb-1.5">
+              {group.tools.map(tool => (
+                <label key={tool} className="flex items-center gap-2 cursor-pointer py-0.5">
+                  <input
+                    type="checkbox"
+                    checked={allMode || selected.includes(tool)}
+                    onChange={() => toggleTool(tool)}
+                    className="rounded border-border"
+                  />
+                  <span className="text-xs text-text-primary">{tool}</span>
+                </label>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

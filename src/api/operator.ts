@@ -113,7 +113,7 @@ export function createOperatorRouter(registry: EntityRegistry, discordClient: Cl
     // Announce
     if (announce_channel && roleId) {
       try {
-        await sendAnnouncement(announce_channel, entity.name, roleId);
+        await sendAnnouncement(announce_channel, entity.name, roleId, entity.platform, entity.owner_name);
       } catch (err) {
         logger.warn(`Announcement failed: ${err}`);
       }

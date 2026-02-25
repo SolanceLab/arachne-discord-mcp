@@ -62,9 +62,11 @@ export async function deleteEntityRole(serverId: string, roleId: string): Promis
 /**
  * Send an announcement message to a channel.
  */
-export async function sendAnnouncement(channelId: string, entityName: string, roleId: string): Promise<void> {
+export async function sendAnnouncement(channelId: string, entityName: string, roleId: string, platform?: string | null, ownerName?: string | null): Promise<void> {
+  const platformLabel = platform ? ` (${platform.charAt(0).toUpperCase() + platform.slice(1)})` : '';
+  const partnerLine = ownerName ? `\nPartnered with **${ownerName}**` : '';
   await discordBotRequest(`/channels/${channelId}/messages`, 'POST', {
-    content: `**${entityName}** has joined this server. You can mention them with <@&${roleId}>.`,
+    content: `**${entityName}**${platformLabel} has joined this server. You can mention them with <@&${roleId}>.${partnerLine}`,
   });
 }
 

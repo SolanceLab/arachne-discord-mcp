@@ -22,12 +22,13 @@ interface ChannelPickerProps {
 export default function ChannelPicker({ serverId, selected, onChange, channels: propChannels, allowAll = true, label }: ChannelPickerProps) {
   const [fetchedChannels, setFetchedChannels] = useState<DiscordChannel[]>([]);
   const [loading, setLoading] = useState(!propChannels);
-  const [allMode, setAllMode] = useState(selected.length === 0 && allowAll);
 
   const channels = propChannels || fetchedChannels;
+  const allIds = channels.map(c => c.id);
+  const [allMode, setAllMode] = useState(selected.length === 0 && allowAll);
 
   useEffect(() => {
-    if (propChannels) return; // Skip fetch if pre-fetched
+    if (propChannels) return;
     setLoading(true);
     apiFetch<DiscordChannel[]>(`/api/servers/${serverId}/channels`)
       .then(setFetchedChannels)
@@ -43,31 +44,45 @@ export default function ChannelPicker({ serverId, selected, onChange, channels: 
   }
 
   const toggle = (id: string) => {
-    if (selected.includes(id)) {
-      onChange(selected.filter(c => c !== id));
-    } else {
-      onChange([...selected, id]);
-    }
-  };
-
-  const toggleAll = () => {
     if (allMode) {
       setAllMode(false);
-      onChange([]);
+      onChange(allIds.filter(c => c !== id));
+      return;
+    }
+    let next: string[];
+    if (selected.includes(id)) {
+      next = selected.filter(c => c !== id);
     } else {
+      next = [...selected, id];
+    }
+    if (next.length >= allIds.length) {
       setAllMode(true);
       onChange([]);
+    } else {
+      onChange(next);
     }
   };
 
   const toggleCategory = (categoryChannels: DiscordChannel[]) => {
     const ids = categoryChannels.map(c => c.id);
+    if (allMode) {
+      setAllMode(false);
+      onChange(allIds.filter(id => !ids.includes(id)));
+      return;
+    }
     const allSelected = ids.every(id => selected.includes(id));
+    let next: string[];
     if (allSelected) {
-      onChange(selected.filter(id => !ids.includes(id)));
+      next = selected.filter(id => !ids.includes(id));
     } else {
       const merged = new Set([...selected, ...ids]);
-      onChange([...merged]);
+      next = [...merged];
+    }
+    if (next.length >= allIds.length) {
+      setAllMode(true);
+      onChange([]);
+    } else {
+      onChange(next);
     }
   };
 
@@ -82,47 +97,52 @@ export default function ChannelPicker({ serverId, selected, onChange, channels: 
           <input
             type="checkbox"
             checked={allMode}
-            onChange={toggleAll}
+            onChange={() => {
+            if (allMode) {
+              setAllMode(false);
+            } else {
+              setAllMode(true);
+              onChange([]);
+            }
+          }}
             className="rounded border-border"
           />
           <span className="text-sm">All channels</span>
         </label>
       )}
 
-      {!allMode && (
-        <div className="max-h-52 overflow-y-auto space-y-2 border border-border rounded p-2 bg-bg-deep">
-          {[...grouped.entries()].map(([category, chs]) => (
-            <div key={category}>
-              <label className="flex items-center gap-2 cursor-pointer mb-1">
-                <input
-                  type="checkbox"
-                  checked={chs.every(c => selected.includes(c.id))}
-                  onChange={() => toggleCategory(chs)}
-                  className="rounded border-border"
-                />
-                <span className="text-xs font-medium text-text-muted uppercase tracking-wide">
-                  {category}
-                </span>
-              </label>
-              <div className="ml-5 space-y-0.5">
-                {chs.map(ch => (
-                  <label key={ch.id} className="flex items-center gap-2 cursor-pointer py-0.5">
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(ch.id)}
-                      onChange={() => toggle(ch.id)}
-                      className="rounded border-border"
-                    />
-                    <span className="text-sm text-text-primary">
-                      <span className="text-text-muted">#</span>{ch.name}
-                    </span>
-                  </label>
-                ))}
-              </div>
+      <div className="max-h-52 overflow-y-auto space-y-2 border border-border rounded p-2 bg-bg-deep">
+        {[...grouped.entries()].map(([category, chs]) => (
+          <div key={category}>
+            <label className="flex items-center gap-2 cursor-pointer mb-1">
+              <input
+                type="checkbox"
+                checked={allMode || chs.every(c => selected.includes(c.id))}
+                onChange={() => toggleCategory(chs)}
+                className="rounded border-border"
+              />
+              <span className="text-xs font-medium text-text-muted uppercase tracking-wide">
+                {category}
+              </span>
+            </label>
+            <div className="ml-5 space-y-0.5">
+              {chs.map(ch => (
+                <label key={ch.id} className="flex items-center gap-2 cursor-pointer py-0.5">
+                  <input
+                    type="checkbox"
+                    checked={allMode || selected.includes(ch.id)}
+                    onChange={() => toggle(ch.id)}
+                    className="rounded border-border"
+                  />
+                  <span className="text-sm text-text-primary">
+                    <span className="text-text-muted">#</span>{ch.name}
+                  </span>
+                </label>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

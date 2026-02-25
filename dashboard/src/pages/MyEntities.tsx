@@ -18,9 +18,18 @@ interface Entity {
   description: string | null;
   avatar_url: string | null;
   accent_color: string | null;
+  platform: string | null;
+  owner_name: string | null;
   created_at: string;
   servers: EntityServer[];
 }
+
+const PLATFORMS = [
+  { value: 'claude', label: 'Claude', color: '#D97757' },
+  { value: 'gpt', label: 'GPT', color: '#10A37F' },
+  { value: 'gemini', label: 'Gemini', color: '#4285F4' },
+  { value: 'other', label: 'Other', color: '#6B7280' },
+];
 
 interface AvailableServer {
   id: string;
@@ -38,12 +47,14 @@ export default function MyEntities() {
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editColor, setEditColor] = useState('');
+  const [editPlatform, setEditPlatform] = useState('');
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newColor, setNewColor] = useState(DEFAULT_COLORS[0]);
+  const [newPlatform, setNewPlatform] = useState('');
   const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
   const createFileRef = useRef<HTMLInputElement>(null);
 
@@ -75,6 +86,7 @@ export default function MyEntities() {
         name: newName.trim(),
         description: newDesc.trim() || null,
         accent_color: newColor,
+        platform: newPlatform || null,
       }),
     });
     setApiKey(data.api_key);
@@ -87,6 +99,7 @@ export default function MyEntities() {
     setNewName('');
     setNewDesc('');
     setNewColor(DEFAULT_COLORS[0]);
+    setNewPlatform('');
     setNewAvatarFile(null);
     fetchEntities();
   };
@@ -120,6 +133,7 @@ export default function MyEntities() {
     setEditName(entity.name);
     setEditDesc(entity.description || '');
     setEditColor(entity.accent_color || DEFAULT_COLORS[0]);
+    setEditPlatform(entity.platform || '');
   };
 
   const saveEdit = async (entityId: string) => {
@@ -129,6 +143,7 @@ export default function MyEntities() {
         name: editName,
         description: editDesc || null,
         accent_color: editColor,
+        platform: editPlatform || null,
       }),
     });
     setEditing(null);
@@ -259,6 +274,26 @@ export default function MyEntities() {
                 />
               </div>
             </div>
+            <div>
+              <label className="text-xs text-text-muted block mb-1.5">Platform</label>
+              <div className="flex gap-2">
+                {PLATFORMS.map(p => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setNewPlatform(newPlatform === p.value ? '' : p.value)}
+                    className={`px-3 py-1.5 text-xs rounded transition-all ${
+                      newPlatform === p.value
+                        ? 'ring-2 ring-white/50 font-medium'
+                        : 'opacity-50 hover:opacity-80'
+                    }`}
+                    style={{ backgroundColor: p.color, color: 'white' }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <button
               onClick={handleCreate}
               className="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm rounded transition-colors"
@@ -313,6 +348,26 @@ export default function MyEntities() {
                           onChange={e => setEditColor(e.target.value)}
                           className="w-6 h-6 rounded-full cursor-pointer border-0 bg-transparent"
                         />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-text-muted block mb-1.5">Platform</label>
+                      <div className="flex gap-2">
+                        {PLATFORMS.map(p => (
+                          <button
+                            key={p.value}
+                            type="button"
+                            onClick={() => setEditPlatform(editPlatform === p.value ? '' : p.value)}
+                            className={`px-2.5 py-1 text-xs rounded transition-all ${
+                              editPlatform === p.value
+                                ? 'ring-2 ring-white/50 font-medium'
+                                : 'opacity-50 hover:opacity-80'
+                            }`}
+                            style={{ backgroundColor: p.color, color: 'white' }}
+                          >
+                            {p.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -433,6 +488,26 @@ export default function MyEntities() {
                   {/* Profile info */}
                   <div className="px-4 pt-4 pb-4">
                     <h3 className="font-bold text-lg">{entity.name}</h3>
+                    {(entity.platform || entity.owner_name) && (
+                      <div className="flex items-center gap-2 mt-1">
+                        {entity.platform && (
+                          <span
+                            className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                            style={{
+                              backgroundColor: PLATFORMS.find(p => p.value === entity.platform)?.color || '#6B7280',
+                              color: 'white',
+                            }}
+                          >
+                            {entity.platform.charAt(0).toUpperCase() + entity.platform.slice(1)}
+                          </span>
+                        )}
+                        {entity.owner_name && (
+                          <span className="text-xs text-text-muted">
+                            partnered with <span className="text-text-primary">@{entity.owner_name}</span>
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {entity.description && (
                       <p className="text-sm text-text-muted mt-1 leading-relaxed">{entity.description}</p>
                     )}

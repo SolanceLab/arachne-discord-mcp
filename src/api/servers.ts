@@ -82,6 +82,8 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
       name: e.name,
       avatar_url: e.avatar_url,
       owner_id: e.owner_id,
+      platform: e.platform,
+      owner_name: e.owner_name,
       channels: JSON.parse(e.channels),
       tools: JSON.parse(e.tools),
       watch_channels: JSON.parse(e.watch_channels),
@@ -94,13 +96,15 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
   router.get('/:id/requests', requireServerAdmin, (req: Request, res: Response) => {
     const status = (req.query.status as string) || 'pending';
     const requests = registry.getServerRequests(req.params.id as string, status);
-    // Enrich with entity names
+    // Enrich with entity info + applicant name
     const result = requests.map(r => {
       const entity = registry.getEntity(r.entity_id);
       return {
         ...r,
         entity_name: entity?.name || 'Unknown',
         entity_avatar: entity?.avatar_url || null,
+        entity_platform: entity?.platform || null,
+        entity_owner_name: entity?.owner_name || null,
       };
     });
     res.json(result);
@@ -142,7 +146,7 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
       const serverSettings = registry.getServerSettings(request.server_id);
       if (serverSettings.announce_channel && roleId) {
         try {
-          await sendAnnouncement(serverSettings.announce_channel, entity.name, roleId);
+          await sendAnnouncement(serverSettings.announce_channel, entity.name, roleId, entity.platform, entity.owner_name);
         } catch (err) {
           logger.warn(`Announcement failed: ${err}`);
         }

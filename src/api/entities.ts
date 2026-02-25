@@ -40,7 +40,7 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
 
   // POST /api/entities — create entity (self-service)
   router.post('/', async (req: Request, res: Response) => {
-    const { name, description, accent_color } = req.body;
+    const { name, description, accent_color, platform } = req.body;
     if (!name || !name.trim()) {
       res.status(400).json({ error: 'name required' });
       return;
@@ -52,11 +52,12 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
       return;
     }
     const { entity, apiKey } = await registry.createEntity(name.trim(), undefined);
-    registry.setEntityOwner(entity.id, req.user!.sub);
-    if (description || accent_color) {
+    registry.setEntityOwner(entity.id, req.user!.sub, req.user!.username);
+    if (description || accent_color || platform) {
       registry.updateEntityIdentity(entity.id, {
         description: description?.trim() || undefined,
         accentColor: accent_color || undefined,
+        platform: platform || undefined,
       });
     }
     res.json({
@@ -64,6 +65,8 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
       name: entity.name,
       description: description || null,
       accent_color: accent_color || null,
+      platform: platform || null,
+      owner_name: req.user!.username,
       avatar_url: entity.avatar_url,
       api_key: apiKey,
       mcp_url: `/mcp/${entity.id}`,
@@ -79,6 +82,8 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
       description: e.description,
       avatar_url: e.avatar_url,
       accent_color: e.accent_color,
+      platform: e.platform,
+      owner_name: e.owner_name,
       created_at: e.created_at,
       servers: registry.getEntityServers(e.id).map(s => {
         const guild = discordClient.guilds.cache.get(s.server_id);
@@ -115,6 +120,8 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
       description: entity.description,
       avatar_url: entity.avatar_url,
       accent_color: entity.accent_color,
+      platform: entity.platform,
+      owner_name: entity.owner_name,
       owner_id: entity.owner_id,
       created_at: entity.created_at,
       servers: servers.map(s => {
@@ -143,8 +150,8 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
       res.status(403).json({ error: 'Not your entity' });
       return;
     }
-    const { name, avatar_url, description, accent_color } = req.body;
-    registry.updateEntityIdentity(entity.id, { name, avatarUrl: avatar_url, description, accentColor: accent_color });
+    const { name, avatar_url, description, accent_color, platform } = req.body;
+    registry.updateEntityIdentity(entity.id, { name, avatarUrl: avatar_url, description, accentColor: accent_color, platform });
     res.json({ success: true });
   });
 
@@ -242,7 +249,7 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
       res.status(400).json({ error: 'server_id required' });
       return;
     }
-    const request = registry.createServerRequest(entity.id, server_id, req.user!.sub);
+    const request = registry.createServerRequest(entity.id, server_id, req.user!.sub, req.user!.username);
     res.json(request);
   });
 

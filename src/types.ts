@@ -11,6 +11,8 @@ export interface Entity {
   description: string | null;
   avatar_url: string | null;
   accent_color: string | null; // Hex color for profile banner
+  platform: string | null;     // 'claude' | 'gpt' | 'gemini' | 'other'
+  owner_name: string | null;   // Discord display name of owner
   api_key_hash: string;
   key_salt: string;
   created_at: string;
@@ -92,6 +94,7 @@ export interface ServerRequest {
   server_id: string;
   status: 'pending' | 'approved' | 'rejected';
   requested_by: string;
+  requested_by_name: string | null;
   reviewed_by: string | null;
   created_at: string;
   reviewed_at: string | null;

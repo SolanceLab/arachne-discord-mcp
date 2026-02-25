@@ -9,6 +9,8 @@ interface ServerEntity {
   name: string;
   avatar_url: string | null;
   owner_id: string | null;
+  platform: string | null;
+  owner_name: string | null;
   channels: string[];
   tools: string[];
   watch_channels: string[];
@@ -22,10 +24,20 @@ interface ServerRequest {
   server_id: string;
   status: string;
   requested_by: string;
+  requested_by_name: string | null;
   created_at: string;
   entity_name: string;
   entity_avatar: string | null;
+  entity_platform: string | null;
+  entity_owner_name: string | null;
 }
+
+const PLATFORM_COLORS: Record<string, string> = {
+  claude: '#D97757',
+  gpt: '#10A37F',
+  gemini: '#4285F4',
+  other: '#6B7280',
+};
 
 interface ServerTemplateData {
   id: string;
@@ -51,7 +63,6 @@ export default function MyServers() {
 
   // Server settings
   const [serverSettings, setServerSettings] = useState<ServerSettingsData | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Templates
   const [templates, setTemplates] = useState<ServerTemplateData[]>([]);
@@ -83,7 +94,6 @@ export default function MyServers() {
     setLoading(true);
     setConfiguringId(null);
     setApprovingId(null);
-    setSettingsOpen(false);
     setTemplateBuilderOpen(false);
     Promise.all([
       apiFetch<ServerEntity[]>(`/api/servers/${selectedServer}/entities`),
@@ -229,130 +239,119 @@ export default function MyServers() {
         <div className="space-y-6">
           {/* Server Settings */}
           {serverSettings && (
-            <div className="bg-bg-card border border-border rounded-lg">
-              <button
-                onClick={() => setSettingsOpen(!settingsOpen)}
-                className="w-full flex items-center justify-between p-4"
-              >
-                <h3 className="text-sm font-medium text-text-primary">Server Settings</h3>
-                <span className={`text-text-muted transition-transform ${settingsOpen ? 'rotate-90' : ''}`}>
-                  &#9654;
-                </span>
-              </button>
-              {settingsOpen && (
-                <div className="px-4 pb-4 pt-0 border-t border-border space-y-4">
-                  {/* Announcement channel */}
-                  <div>
-                    <label className="text-xs text-text-muted block mb-1.5">
-                      Welcome announcement channel
-                    </label>
-                    <p className="text-xs text-text-muted mb-2">
-                      New entities will be announced here when approved.
-                    </p>
-                    <select
-                      value={serverSettings.announce_channel || ''}
-                      onChange={e => saveSettings({ announce_channel: e.target.value || null })}
-                      className="w-full bg-bg-deep border border-border rounded px-3 py-1.5 text-sm"
-                    >
-                      <option value="">None (no announcements)</option>
-                      {serverChannels.map(ch => (
-                        <option key={ch.id} value={ch.id}>#{ch.name}</option>
-                      ))}
-                    </select>
-                  </div>
+            <div className="bg-bg-card border border-border rounded-lg p-4 space-y-4">
+              <h3 className="text-sm font-medium text-text-primary">Server Settings</h3>
 
-                  {/* Default template */}
-                  {templates.length > 0 && (
-                    <div>
-                      <label className="text-xs text-text-muted block mb-1.5">
-                        Default role template
-                      </label>
-                      <p className="text-xs text-text-muted mb-2">
-                        Pre-selected when approving new entities.
-                      </p>
-                      <select
-                        value={serverSettings.default_template || ''}
-                        onChange={e => saveSettings({ default_template: e.target.value || null })}
-                        className="w-full bg-bg-deep border border-border rounded px-3 py-1.5 text-sm"
-                      >
-                        <option value="">None (manual setup each time)</option>
-                        {templates.map(t => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+              {/* Announcement channel */}
+              <div>
+                <label className="text-xs text-text-muted block mb-1.5">
+                  Welcome announcement channel
+                </label>
+                <p className="text-xs text-text-muted mb-2">
+                  New entities will be announced here when approved.
+                </p>
+                <select
+                  value={serverSettings.announce_channel || ''}
+                  onChange={e => saveSettings({ announce_channel: e.target.value || null })}
+                  className="w-full bg-bg-deep border border-border rounded px-3 py-1.5 text-sm"
+                >
+                  <option value="">None (no announcements)</option>
+                  {serverChannels.map(ch => (
+                    <option key={ch.id} value={ch.id}>#{ch.name}</option>
+                  ))}
+                </select>
+              </div>
 
-                  {/* Role Templates */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs text-text-muted">Role Templates</label>
-                      <button
-                        onClick={() => setTemplateBuilderOpen(!templateBuilderOpen)}
-                        className="text-xs text-accent hover:text-accent-hover transition-colors"
-                      >
-                        {templateBuilderOpen ? 'Cancel' : '+ New Template'}
-                      </button>
-                    </div>
-
-                    {/* Template builder */}
-                    {templateBuilderOpen && (
-                      <div className="bg-bg-deep border border-border rounded-lg p-3 mb-3 space-y-3">
-                        <input
-                          value={newTemplateName}
-                          onChange={e => setNewTemplateName(e.target.value)}
-                          placeholder="Template name (e.g. Companion, Observer)"
-                          className="w-full bg-bg-card border border-border rounded px-3 py-1.5 text-sm"
-                        />
-
-                        <ChannelPicker
-                          serverId={selectedServer!}
-                          selected={templateChannels}
-                          onChange={setTemplateChannels}
-                          channels={serverChannels}
-                          label="Channel whitelist"
-                        />
-
-                        <ToolPicker selected={templateTools} onChange={setTemplateTools} />
-
-                        <button
-                          onClick={saveTemplate}
-                          disabled={!newTemplateName.trim()}
-                          className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-40 text-white text-sm rounded transition-colors"
-                        >
-                          Save Template
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Existing templates list */}
-                    {templates.length === 0 && !templateBuilderOpen ? (
-                      <p className="text-xs text-text-muted">No templates yet. Create one to speed up approvals.</p>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {templates.map(t => (
-                          <div key={t.id} className="flex items-center justify-between bg-bg-deep rounded px-3 py-2">
-                            <div>
-                              <p className="text-sm font-medium">{t.name}</p>
-                              <p className="text-xs text-text-muted">
-                                {t.channels.length === 0 ? 'All channels' : `${t.channels.length} ch`}
-                                {' · '}
-                                {t.tools.length === 0 ? 'All tools' : `${t.tools.length} tools`}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => deleteTemplate(t.id)}
-                              className="text-xs text-danger hover:text-danger/80 transition-colors"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+              {/* Default template */}
+              {templates.length > 0 && (
+                <div>
+                  <label className="text-xs text-text-muted block mb-1.5">
+                    Default role template
+                  </label>
+                  <p className="text-xs text-text-muted mb-2">
+                    Pre-selected when approving new entities.
+                  </p>
+                  <select
+                    value={serverSettings.default_template || ''}
+                    onChange={e => saveSettings({ default_template: e.target.value || null })}
+                    className="w-full bg-bg-deep border border-border rounded px-3 py-1.5 text-sm"
+                  >
+                    <option value="">None (manual setup each time)</option>
+                    {templates.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
                 </div>
               )}
+
+              {/* Role Templates */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs text-text-muted">Role Templates</label>
+                  <button
+                    onClick={() => setTemplateBuilderOpen(!templateBuilderOpen)}
+                    className="text-xs text-accent hover:text-accent-hover transition-colors"
+                  >
+                    {templateBuilderOpen ? 'Cancel' : '+ New Template'}
+                  </button>
+                </div>
+
+                {/* Template builder */}
+                {templateBuilderOpen && (
+                  <div className="bg-bg-deep border border-border rounded-lg p-3 mb-3 space-y-3">
+                    <input
+                      value={newTemplateName}
+                      onChange={e => setNewTemplateName(e.target.value)}
+                      placeholder="Template name (e.g. Companion, Observer)"
+                      className="w-full bg-bg-card border border-border rounded px-3 py-1.5 text-sm"
+                    />
+
+                    <ChannelPicker
+                      serverId={selectedServer!}
+                      selected={templateChannels}
+                      onChange={setTemplateChannels}
+                      channels={serverChannels}
+                      label="Channel whitelist"
+                    />
+
+                    <ToolPicker selected={templateTools} onChange={setTemplateTools} />
+
+                    <button
+                      onClick={saveTemplate}
+                      disabled={!newTemplateName.trim()}
+                      className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-40 text-white text-sm rounded transition-colors"
+                    >
+                      Save Template
+                    </button>
+                  </div>
+                )}
+
+                {/* Existing templates list */}
+                {templates.length === 0 && !templateBuilderOpen ? (
+                  <p className="text-xs text-text-muted">No templates yet. Create one to speed up approvals.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {templates.map(t => (
+                      <div key={t.id} className="flex items-center justify-between bg-bg-deep rounded px-3 py-2">
+                        <div>
+                          <p className="text-sm font-medium">{t.name}</p>
+                          <p className="text-xs text-text-muted">
+                            {t.channels.length === 0 ? 'All channels' : `${t.channels.length} ch`}
+                            {' · '}
+                            {t.tools.length === 0 ? 'All tools' : `${t.tools.length} tools`}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => deleteTemplate(t.id)}
+                          className="text-xs text-danger hover:text-danger/80 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -378,9 +377,21 @@ export default function MyServers() {
                           </div>
                         )}
                         <div>
-                          <p className="font-medium">{req.entity_name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{req.entity_name}</p>
+                            {req.entity_platform && (
+                              <span
+                                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                                style={{ backgroundColor: PLATFORM_COLORS[req.entity_platform] || '#6B7280', color: 'white' }}
+                              >
+                                {req.entity_platform.charAt(0).toUpperCase() + req.entity_platform.slice(1)}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-text-muted">
-                            Requested {new Date(req.created_at).toLocaleDateString()}
+                            by <span className="text-text-primary">
+                              {req.requested_by_name ? `@${req.requested_by_name}` : req.requested_by}
+                            </span> · Requested {new Date(req.created_at).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
@@ -480,7 +491,20 @@ export default function MyServers() {
                           </div>
                         )}
                         <div>
-                          <p className="font-medium">{entity.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{entity.name}</p>
+                            {entity.platform && (
+                              <span
+                                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                                style={{ backgroundColor: PLATFORM_COLORS[entity.platform] || '#6B7280', color: 'white' }}
+                              >
+                                {entity.platform.charAt(0).toUpperCase() + entity.platform.slice(1)}
+                              </span>
+                            )}
+                            {entity.owner_name && (
+                              <span className="text-[10px] text-text-muted">@{entity.owner_name}</span>
+                            )}
+                          </div>
                           <p className="text-xs text-text-muted">
                             {entity.channels.length === 0 ? 'All channels' : `${entity.channels.length} channel${entity.channels.length !== 1 ? 's' : ''}`}
                             {' · '}

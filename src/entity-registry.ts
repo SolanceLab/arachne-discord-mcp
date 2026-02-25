@@ -70,6 +70,14 @@ export class EntityRegistry {
       this.db.exec("ALTER TABLE entities ADD COLUMN accent_color TEXT DEFAULT NULL");
       logger.info('Migration: added accent_color column to entities');
     }
+    if (!eCols.some(c => c.name === 'platform')) {
+      this.db.exec("ALTER TABLE entities ADD COLUMN platform TEXT DEFAULT NULL");
+      logger.info('Migration: added platform column to entities');
+    }
+    if (!eCols.some(c => c.name === 'owner_name')) {
+      this.db.exec("ALTER TABLE entities ADD COLUMN owner_name TEXT DEFAULT NULL");
+      logger.info('Migration: added owner_name column to entities');
+    }
 
     // Server settings table (per-server admin config)
     this.db.exec(`
@@ -93,6 +101,12 @@ export class EntityRegistry {
         reviewed_at  TEXT
       );
     `);
+
+    const srCols = this.db.prepare("PRAGMA table_info(server_requests)").all() as Array<{ name: string }>;
+    if (!srCols.some(c => c.name === 'requested_by_name')) {
+      this.db.exec("ALTER TABLE server_requests ADD COLUMN requested_by_name TEXT DEFAULT NULL");
+      logger.info('Migration: added requested_by_name column to server_requests');
+    }
 
     // Server templates table (custom role templates per server)
     this.db.exec(`
@@ -275,10 +289,10 @@ export class EntityRegistry {
   /**
    * Set or change the owner of an entity.
    */
-  setEntityOwner(entityId: string, ownerId: string | null): boolean {
+  setEntityOwner(entityId: string, ownerId: string | null, ownerName?: string | null): boolean {
     const result = this.db.prepare(
-      'UPDATE entities SET owner_id = ? WHERE id = ?'
-    ).run(ownerId, entityId);
+      'UPDATE entities SET owner_id = ?, owner_name = ? WHERE id = ?'
+    ).run(ownerId, ownerName ?? null, entityId);
     return result.changes > 0;
   }
 
@@ -290,17 +304,19 @@ export class EntityRegistry {
     avatarUrl?: string | null;
     description?: string | null;
     accentColor?: string | null;
+    platform?: string | null;
   }): boolean {
     const entity = this.getEntity(entityId);
     if (!entity) return false;
 
     this.db.prepare(
-      'UPDATE entities SET name = ?, avatar_url = ?, description = ?, accent_color = ? WHERE id = ?'
+      'UPDATE entities SET name = ?, avatar_url = ?, description = ?, accent_color = ?, platform = ? WHERE id = ?'
     ).run(
       fields.name ?? entity.name,
       fields.avatarUrl !== undefined ? fields.avatarUrl : entity.avatar_url,
       fields.description !== undefined ? fields.description : entity.description,
       fields.accentColor !== undefined ? fields.accentColor : entity.accent_color,
+      fields.platform !== undefined ? fields.platform : entity.platform,
       entityId,
     );
     return true;
@@ -321,12 +337,12 @@ export class EntityRegistry {
   /**
    * Create a server access request.
    */
-  createServerRequest(entityId: string, serverId: string, requestedBy: string): ServerRequest {
+  createServerRequest(entityId: string, serverId: string, requestedBy: string, requestedByName?: string): ServerRequest {
     const id = uuidv4();
     this.db.prepare(`
-      INSERT INTO server_requests (id, entity_id, server_id, requested_by)
-      VALUES (?, ?, ?, ?)
-    `).run(id, entityId, serverId, requestedBy);
+      INSERT INTO server_requests (id, entity_id, server_id, requested_by, requested_by_name)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(id, entityId, serverId, requestedBy, requestedByName ?? null);
     return this.db.prepare('SELECT * FROM server_requests WHERE id = ?').get(id) as ServerRequest;
   }
 
