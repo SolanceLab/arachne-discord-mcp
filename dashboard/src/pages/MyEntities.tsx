@@ -37,8 +37,6 @@ interface AvailableServer {
   icon: string | null;
 }
 
-const DEFAULT_COLORS = ['#5865F2', '#57F287', '#FEE75C', '#EB459E', '#ED4245', '#F47B67', '#E78BD4', '#9B59B6'];
-
 export default function MyEntities() {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,14 +44,12 @@ export default function MyEntities() {
   const [editing, setEditing] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
-  const [editColor, setEditColor] = useState('');
   const [editPlatform, setEditPlatform] = useState('');
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
-  const [newColor, setNewColor] = useState(DEFAULT_COLORS[0]);
   const [newPlatform, setNewPlatform] = useState('');
   const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
   const createFileRef = useRef<HTMLInputElement>(null);
@@ -98,7 +94,6 @@ export default function MyEntities() {
       body: JSON.stringify({
         name: newName.trim(),
         description: newDesc.trim() || null,
-        accent_color: newColor,
         platform: newPlatform || null,
       }),
     });
@@ -115,7 +110,6 @@ export default function MyEntities() {
     setShowCreate(false);
     setNewName('');
     setNewDesc('');
-    setNewColor(DEFAULT_COLORS[0]);
     setNewPlatform('');
     setNewAvatarFile(null);
     fetchEntities();
@@ -160,7 +154,6 @@ export default function MyEntities() {
     setEditing(entity.id);
     setEditName(entity.name);
     setEditDesc(entity.description || '');
-    setEditColor(entity.accent_color || DEFAULT_COLORS[0]);
     setEditPlatform(entity.platform || '');
   };
 
@@ -170,7 +163,6 @@ export default function MyEntities() {
       body: JSON.stringify({
         name: editName,
         description: editDesc || null,
-        accent_color: editColor,
         platform: editPlatform || null,
       }),
     });
@@ -245,7 +237,7 @@ export default function MyEntities() {
       {showCreate && (
         <div className="bg-bg-card border border-border rounded-lg overflow-hidden mb-6">
           {/* Banner preview */}
-          <div className="h-16 relative" style={{ backgroundColor: newColor }}>
+          <div className="h-16 relative bg-cover bg-center" style={{ backgroundImage: 'url(/assets/banner.png)' }}>
             {/* Avatar upload */}
             <div className="absolute -bottom-6 left-5">
               <input
@@ -282,26 +274,6 @@ export default function MyEntities() {
               rows={2}
               className="w-full bg-bg-deep border border-border rounded px-3 py-2 text-sm resize-none"
             />
-            <div>
-              <label className="text-xs text-text-muted block mb-1.5">Banner color</label>
-              <div className="flex gap-2">
-                {DEFAULT_COLORS.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setNewColor(c)}
-                    className={`w-7 h-7 rounded-full transition-all ${newColor === c ? 'ring-2 ring-white ring-offset-2 ring-offset-bg-card' : 'hover:scale-110'}`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-                <input
-                  type="color"
-                  value={newColor}
-                  onChange={e => setNewColor(e.target.value)}
-                  className="w-7 h-7 rounded-full cursor-pointer border-0 bg-transparent"
-                  title="Custom color"
-                />
-              </div>
-            </div>
             <div>
               <label className="text-xs text-text-muted block mb-1.5">Platform</label>
               <div className="flex gap-2">
@@ -344,7 +316,7 @@ export default function MyEntities() {
               {editing === entity.id ? (
                 /* Edit mode */
                 <div>
-                  <div className="h-16" style={{ backgroundColor: editColor }} />
+                  <div className="h-16 bg-cover bg-center" style={{ backgroundImage: 'url(/assets/banner.png)' }} />
                   <div className="p-5 space-y-3">
                     <input
                       value={editName}
@@ -359,25 +331,6 @@ export default function MyEntities() {
                       placeholder="Description (optional)"
                       rows={2}
                     />
-                    <div>
-                      <label className="text-xs text-text-muted block mb-1.5">Banner color</label>
-                      <div className="flex gap-2">
-                        {DEFAULT_COLORS.map(c => (
-                          <button
-                            key={c}
-                            onClick={() => setEditColor(c)}
-                            className={`w-6 h-6 rounded-full transition-all ${editColor === c ? 'ring-2 ring-white ring-offset-2 ring-offset-bg-card' : 'hover:scale-110'}`}
-                            style={{ backgroundColor: c }}
-                          />
-                        ))}
-                        <input
-                          type="color"
-                          value={editColor}
-                          onChange={e => setEditColor(e.target.value)}
-                          className="w-6 h-6 rounded-full cursor-pointer border-0 bg-transparent"
-                        />
-                      </div>
-                    </div>
                     <div>
                       <label className="text-xs text-text-muted block mb-1.5">Platform</label>
                       <div className="flex gap-2">
@@ -419,8 +372,8 @@ export default function MyEntities() {
                 <div>
                   {/* Banner */}
                   <div
-                    className="h-16 relative"
-                    style={{ backgroundColor: entity.accent_color || '#5865F2' }}
+                    className="h-16 relative bg-cover bg-center"
+                    style={{ backgroundImage: 'url(/assets/banner.png)' }}
                   >
                     {/* Avatar */}
                     <div className="absolute -bottom-8 left-4 z-10">
@@ -523,80 +476,7 @@ export default function MyEntities() {
                     </div>
                   )}
 
-                  {/* Connect panel */}
-                  {connectingFor === entity.id && (
-                    <div className="mx-4 mt-2 p-3 bg-bg-deep border border-accent/30 rounded-lg space-y-3">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-medium text-accent">Connect your AI</p>
-                        <button
-                          onClick={() => setConnectingFor(null)}
-                          className="text-xs text-text-muted hover:text-text-primary"
-                        >
-                          Close
-                        </button>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] uppercase tracking-wider text-text-muted font-medium block mb-1">MCP Endpoint</label>
-                        <div className="flex items-center gap-1.5">
-                          <code className="text-xs text-accent bg-bg-card px-2 py-1 rounded border border-border flex-1 overflow-x-auto whitespace-nowrap">
-                            {`${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/mcp/${entity.id}`}
-                          </code>
-                          <button
-                            onClick={() => copyToClipboard(`${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/mcp/${entity.id}`, `endpoint-${entity.id}`)}
-                            className={`px-2 py-1 text-xs border border-border rounded transition-colors shrink-0 ${copiedField === `endpoint-${entity.id}` ? 'bg-success/20 text-success border-success/30' : 'bg-bg-card hover:bg-border'}`}
-                          >
-                            {copiedField === `endpoint-${entity.id}` ? 'Copied' : 'Copy'}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] uppercase tracking-wider text-text-muted font-medium block mb-1">Claude Desktop</label>
-                        <div className="relative">
-                          <pre className="text-[11px] text-text-primary bg-bg-card px-2.5 py-2 rounded border border-border overflow-x-auto whitespace-pre">{`{
-  "mcpServers": {
-    "${entity.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}": {
-      "url": "${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/mcp/${entity.id}",
-      "headers": {
-        "Authorization": "Bearer YOUR_API_KEY"
-      }
-    }
-  }
-}`}</pre>
-                          <button
-                            onClick={() => copyToClipboard(JSON.stringify({
-                              mcpServers: {
-                                [entity.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')]: {
-                                  url: `${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/mcp/${entity.id}`,
-                                  headers: { Authorization: 'Bearer YOUR_API_KEY' },
-                                },
-                              },
-                            }, null, 2), `config-${entity.id}`)}
-                            className={`absolute top-1.5 right-1.5 px-2 py-0.5 text-[10px] border border-border rounded transition-colors ${copiedField === `config-${entity.id}` ? 'bg-success/20 text-success border-success/30' : 'bg-bg-surface hover:bg-border'}`}
-                          >
-                            {copiedField === `config-${entity.id}` ? 'Copied' : 'Copy'}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] uppercase tracking-wider text-text-muted font-medium block mb-1">ChatGPT / Claude.ai (OAuth)</label>
-                        <ol className="text-xs text-text-muted space-y-0.5 list-decimal list-inside">
-                          <li>Go to <span className="text-text-primary">Settings &gt; Apps</span> (ChatGPT) or <span className="text-text-primary">Settings &gt; Connectors</span> (Claude.ai)</li>
-                          <li>Add new app/connector with the MCP endpoint URL above</li>
-                          <li>Auth: <span className="text-text-primary">OAuth</span> — leave Client ID/Secret blank</li>
-                          <li>You'll be redirected to pick which entity to authorize</li>
-                        </ol>
-                      </div>
-
-                      <p className="text-[10px] text-text-muted">
-                        <span className="text-text-primary">Claude Desktop</span> uses the API key config above.
-                        <span className="text-text-primary">ChatGPT &amp; Claude.ai</span> use OAuth (automatic).
-                        Lost your API key? Click <span className="text-warning">Regen Key</span> to get a new one.
-                      </p>
-                    </div>
-                  )}
+                  {/* Connect modal is rendered at bottom of page */}
 
                   {/* Profile info */}
                   <div className="px-4 pt-4 pb-4">
@@ -699,6 +579,122 @@ export default function MyEntities() {
           ))}
         </div>
       )}
+
+      {/* Connect modal */}
+      {connectingFor && (() => {
+        const entity = entities.find(e => e.id === connectingFor);
+        if (!entity) return null;
+        const mcpUrl = `${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/mcp/${entity.id}`;
+        const serverName = entity.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        return (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setConnectingFor(null)}>
+            <div className="bg-bg-surface border border-border rounded-xl max-w-lg w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-bg-surface rounded-t-xl">
+                <div>
+                  <h3 className="text-sm font-semibold text-text-primary">Connect your AI</h3>
+                  <p className="text-xs text-text-muted mt-0.5">{entity.name}</p>
+                </div>
+                <button
+                  onClick={() => setConnectingFor(null)}
+                  className="text-text-muted hover:text-text-primary text-lg leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div className="px-5 py-4 space-y-5">
+                {/* Claude Desktop / Claude Code */}
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">Claude Desktop / Claude Code</label>
+                  <ol className="text-xs text-text-muted space-y-1.5 list-decimal list-inside mb-3">
+                    <li>Open your config file:
+                      <ul className="ml-5 mt-1 space-y-0.5 list-disc list-inside text-[11px]">
+                        <li><span className="text-text-primary">macOS:</span> <code className="text-accent">~/Library/Application Support/Claude/claude_desktop_config.json</code></li>
+                        <li><span className="text-text-primary">Windows:</span> <code className="text-accent">%APPDATA%\Claude\claude_desktop_config.json</code></li>
+                        <li><span className="text-text-primary">Linux:</span> <code className="text-accent">~/.config/Claude/claude_desktop_config.json</code></li>
+                      </ul>
+                    </li>
+                    <li>Add this block inside <code className="text-accent">"mcpServers"</code>:</li>
+                  </ol>
+                  <div className="relative">
+                    <pre className="text-[11px] text-text-primary bg-bg-deep px-3 py-2.5 rounded border border-border overflow-x-auto whitespace-pre">{`"${serverName}": {
+  "url": "${mcpUrl}",
+  "headers": {
+    "Authorization": "Bearer YOUR_API_KEY"
+  }
+}`}</pre>
+                    <button
+                      onClick={() => copyToClipboard(JSON.stringify({
+                        [serverName]: {
+                          url: mcpUrl,
+                          headers: { Authorization: 'Bearer YOUR_API_KEY' },
+                        },
+                      }, null, 2).slice(2, -2).trim(), `config-${entity.id}`)}
+                      className={`absolute top-1.5 right-1.5 px-2 py-0.5 text-[10px] border border-border rounded transition-colors ${copiedField === `config-${entity.id}` ? 'bg-success/20 text-success border-success/30' : 'bg-bg-surface hover:bg-border'}`}
+                    >
+                      {copiedField === `config-${entity.id}` ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-text-muted mt-1.5">
+                    Replace <code className="text-warning">YOUR_API_KEY</code> with the key you received when creating this entity. Restart Claude Desktop after saving.
+                  </p>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-border" />
+
+                {/* MCP Endpoint */}
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">MCP Endpoint</label>
+                  <div className="flex items-center gap-1.5">
+                    <code className="text-xs text-accent bg-bg-deep px-2.5 py-1.5 rounded border border-border flex-1 overflow-x-auto whitespace-nowrap">
+                      {mcpUrl}
+                    </code>
+                    <button
+                      onClick={() => copyToClipboard(mcpUrl, `endpoint-${entity.id}`)}
+                      className={`px-2.5 py-1.5 text-xs border border-border rounded transition-colors shrink-0 ${copiedField === `endpoint-${entity.id}` ? 'bg-success/20 text-success border-success/30' : 'bg-bg-deep hover:bg-border'}`}
+                    >
+                      {copiedField === `endpoint-${entity.id}` ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-text-muted mt-1.5">Used by cloud platforms below — paste this URL when adding a connector.</p>
+                </div>
+
+                {/* Claude.ai */}
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">Claude.ai</label>
+                  <ol className="text-xs text-text-muted space-y-1 list-decimal list-inside">
+                    <li>Go to <span className="text-text-primary">Settings &gt; Connectors &gt; Add connector</span></li>
+                    <li>Paste your MCP endpoint URL</li>
+                    <li>OAuth is auto-discovered — no API key needed</li>
+                  </ol>
+                </div>
+
+                {/* ChatGPT */}
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">ChatGPT</label>
+                  <ol className="text-xs text-text-muted space-y-1 list-decimal list-inside">
+                    <li>Go to <span className="text-text-primary">Settings &gt; Apps &amp; Connectors &gt; Add custom connector</span></li>
+                    <li>Paste your MCP endpoint URL</li>
+                    <li>OAuth is auto-discovered</li>
+                    <li>Requires <span className="text-text-primary">Developer Mode</span> and a paid tier (Plus, Pro, Business, Enterprise, or Edu)</li>
+                  </ol>
+                </div>
+
+                {/* Footer note */}
+                <div className="border-t border-border pt-3">
+                  <p className="text-[10px] text-text-muted leading-relaxed">
+                    Cloud platforms (<span className="text-text-primary">Claude.ai</span>, <span className="text-text-primary">ChatGPT</span>) use OAuth 2.1 — no API key needed.
+                    Local clients (<span className="text-text-primary">Claude Desktop</span>, <span className="text-text-primary">Claude Code</span>) use the API key in the config file.
+                    Lost your API key? Close this modal and click <span className="text-warning">Regen Key</span>.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {apiKey && <ApiKeyModal apiKey={apiKey} onClose={() => setApiKey(null)} />}
     </div>

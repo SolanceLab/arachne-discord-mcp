@@ -11,13 +11,17 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
 
   router.use(requireAuth);
 
-  // GET /api/servers/available — list all servers where bot is present (for server request picker)
-  router.get('/available', (_req: Request, res: Response) => {
-    const guilds = discordClient.guilds.cache.map(g => ({
-      id: g.id,
-      name: g.name,
-      icon: g.icon,
-    }));
+  // GET /api/servers/available — list servers where user is member AND bot is present
+  router.get('/available', (req: Request, res: Response) => {
+    const user = req.user!;
+    const memberSet = new Set(user.member_guilds || []);
+    const guilds = discordClient.guilds.cache
+      .filter(g => user.is_operator || memberSet.has(g.id))
+      .map(g => ({
+        id: g.id,
+        name: g.name,
+        icon: g.icon,
+      }));
     res.json(guilds);
   });
 

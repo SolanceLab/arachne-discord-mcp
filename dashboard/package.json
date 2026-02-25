@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "deploy": "npm run build && wrangler pages deploy dist/ --project-name arachne-loom",
+    "deploy": "npm run build && npx wrangler pages deploy dist/ --project-name arachne-loom --branch main",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -122,6 +122,7 @@ export interface JWTPayload {
   avatar: string | null;
   is_operator: boolean;
   admin_guilds: string[]; // Guild IDs where user is admin + bot is present
+  member_guilds: string[]; // Guild IDs where user is member + bot is present
   iat: number;
   exp: number;
 }

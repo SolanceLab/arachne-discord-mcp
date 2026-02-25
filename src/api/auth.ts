@@ -56,7 +56,12 @@ export function createAuthRouter(registry: EntityRegistry, discordClient: Client
       // Get bot's guild IDs
       const botGuildIds = new Set(discordClient.guilds.cache.map(g => g.id));
 
-      // Filter to guilds where user is admin AND bot is present
+      // Filter to guilds where user is member AND bot is present
+      const memberGuilds = guilds
+        .filter(g => botGuildIds.has(g.id))
+        .map(g => g.id);
+
+      // Filter further to guilds where user is admin
       const adminGuilds = guilds
         .filter(g => {
           const perms = BigInt(g.permissions);
@@ -74,9 +79,10 @@ export function createAuthRouter(registry: EntityRegistry, discordClient: Client
         avatar: user.avatar,
         is_operator: isOperator,
         admin_guilds: adminGuilds,
+        member_guilds: memberGuilds,
       });
 
-      logger.info(`Dashboard login: ${user.username} (${user.id}) operator=${isOperator} admin_guilds=${adminGuilds.length}`);
+      logger.info(`Dashboard login: ${user.username} (${user.id}) operator=${isOperator} admin_guilds=${adminGuilds.length} member_guilds=${memberGuilds.length}`);
 
       res.json({ token });
     } catch (err) {
