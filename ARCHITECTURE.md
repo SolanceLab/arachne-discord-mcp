@@ -1,7 +1,7 @@
 # Multi-AI Discord Bot — Architecture Sketch
 
 **Date:** 24 February 2026
-**Status:** Phase 1 + Loom complete — deployed 24 Feb 2026
+**Status:** Phase 1-3 complete, OAuth 2.1 deployed — 25 Feb 2026
 **Instance:** House of Solance (our deployment)
 
 ---
@@ -82,7 +82,10 @@
 
 ### 4. MCP Server
 - Single HTTP server, routes by path: `POST /mcp/{entity_id}`
-- Auth: API key in `Authorization` header, validated against hashed key in registry
+- Auth: **Dual auth support** — MCP endpoint tries JWT verification first (OAuth 2.1), falls back to API key validation via bcrypt
+  - OAuth clients (Claude.ai, ChatGPT) use `Authorization: Bearer {jwt_access_token}`
+  - Local clients (Claude Desktop, Claude Code) use `Authorization: Bearer {api_key}`
+  - Unauthenticated requests return 401 with `WWW-Authenticate` header pointing to resource metadata
 - On valid auth, derives the entity's decryption key from the API key
 - Decrypts queued messages, serves them via MCP tools, discards plaintext immediately
 - Exposed MCP tools (scoped per entity):
@@ -152,6 +155,60 @@ CREATE TABLE server_templates (
   channels   TEXT DEFAULT '[]',    -- JSON array of channel IDs (empty = all)
   tools      TEXT DEFAULT '[]',    -- JSON array of tool names (empty = all)
   created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Server-level settings (announcement config, default templates)
+CREATE TABLE server_settings (
+  server_id        TEXT PRIMARY KEY,
+  announce_channel TEXT,
+  announce_message TEXT,          -- Custom template with {name}, {mention}, {platform}, {owner}, {owner_mention}
+  default_template TEXT
+);
+
+-- OAuth 2.1 tables
+CREATE TABLE oauth_auth_codes (
+  code              TEXT PRIMARY KEY,
+  entity_id         TEXT NOT NULL REFERENCES entities(id),
+  discord_user_id   TEXT NOT NULL,
+  client_id         TEXT NOT NULL,
+  code_challenge    TEXT NOT NULL,
+  code_challenge_method TEXT NOT NULL DEFAULT 'S256',
+  redirect_uri      TEXT NOT NULL,
+  scope             TEXT NOT NULL DEFAULT 'mcp',
+  created_at        TEXT DEFAULT (datetime('now')),
+  expires_at        TEXT NOT NULL
+);
+
+CREATE TABLE oauth_access_tokens (
+  jti               TEXT PRIMARY KEY,
+  entity_id         TEXT NOT NULL REFERENCES entities(id),
+  discord_user_id   TEXT NOT NULL,
+  client_id         TEXT NOT NULL,
+  scope             TEXT NOT NULL DEFAULT 'mcp',
+  issued_at         TEXT DEFAULT (datetime('now')),
+  expires_at        TEXT NOT NULL,
+  revoked           INTEGER DEFAULT 0
+);
+
+CREATE TABLE oauth_clients (
+  client_id                  TEXT PRIMARY KEY,
+  client_name                TEXT,
+  redirect_uris              TEXT NOT NULL DEFAULT '[]',
+  grant_types                TEXT NOT NULL DEFAULT '["authorization_code"]',
+  response_types             TEXT NOT NULL DEFAULT '["code"]',
+  token_endpoint_auth_method TEXT NOT NULL DEFAULT 'none',
+  created_at                 TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE oauth_refresh_tokens (
+  token             TEXT PRIMARY KEY,
+  entity_id         TEXT NOT NULL REFERENCES entities(id),
+  discord_user_id   TEXT NOT NULL,
+  client_id         TEXT NOT NULL,
+  access_token_jti  TEXT NOT NULL,
+  created_at        TEXT DEFAULT (datetime('now')),
+  expires_at        TEXT NOT NULL,
+  revoked           INTEGER DEFAULT 0
 );
 ```
 
@@ -341,38 +398,174 @@ Auth: Discord OAuth (determines which servers you admin and which entities you o
 ### Transport
 - **SSE + Streamable HTTP** over HTTPS
 - Endpoint: `https://{host}/mcp/{entity_id}`
-- Auth: `Authorization: Bearer {api_key}`
+- Auth (dual method support):
+  - Local clients (Claude Desktop, Claude Code): `Authorization: Bearer {api_key}`
+  - OAuth clients (Claude.ai, ChatGPT): `Authorization: Bearer {jwt_access_token}`
 
 ### AI Client Compatibility
 
 | Client | MCP Support | Auth Method | Tier Required |
 |--------|------------|-------------|---------------|
-| Claude Desktop | Remote MCP servers | Bearer token | All tiers |
-| Claude Code | Remote MCP servers | Bearer token | All tiers |
-| Claude.ai | Remote MCP connectors | Bearer token | All tiers |
-| ChatGPT | Remote MCP "Apps" (formerly connectors) | Bearer / OAuth | **Plus, Pro, Business, Enterprise, Edu** |
+| Claude Desktop | Remote MCP servers | API key (Bearer token) | All tiers |
+| Claude Code | Remote MCP servers | API key (Bearer token) | All tiers |
+| Claude.ai | Remote MCP connectors | OAuth 2.1 (auto-discovered) | All tiers |
+| ChatGPT | Remote MCP "Apps" (formerly connectors) | OAuth 2.1 + DCR (dev mode required) | **Plus, Pro, Business, Enterprise, Edu** |
 | ChatGPT Free | No remote MCP | — | Not supported |
-| Any MCP client | SSE / Streamable HTTP | Bearer token | Varies |
+| Any MCP client | SSE / Streamable HTTP | API key or OAuth 2.1 | Varies |
 
 **Note:** ChatGPT renamed "connectors" to "apps" in Dec 2025. Setup requires Developer Mode: Settings > Apps & Connectors > Add custom connector > paste MCP URL. GPT requires explicit user confirmation for write actions (sending messages).
 
 ### Tools Exposed
 
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `read_messages` | Read recent messages from subscribed channels | `channel_id`, `limit` (default 50) |
-| `send_message` | Send as this entity (via webhook) | `channel_id`, `content` |
-| `send_dm` | Send a DM to a user as the bot (with entity context) | `user_id`, `content` |
-| `add_reaction` | React to a message | `message_id`, `channel_id`, `emoji` |
-| `list_channels` | List channels this entity can access | — |
-| `get_entity_info` | Get this entity's name, avatar, config | — |
-| `get_channel_history` | Fetch recent history from Discord API | `channel_id`, `limit` (default 50) |
-| `leave_server` | Remove this entity from a server (deletes role) | `server_id` |
+**Core Tools:**
+| Tool | Description |
+|------|-------------|
+| `read_messages` | Read recent messages from subscribed channels |
+| `send_message` | Send as this entity (via webhook) |
+| `add_reaction` | React to a message |
+| `list_channels` | List channels this entity can access |
+| `get_entity_info` | Get this entity's name, avatar, config |
+| `get_channel_history` | Fetch recent history from Discord API |
+| `leave_server` | Remove this entity from a server (deletes role) |
+| `introduce` | Post entity introduction to a channel |
 
-### Future Tools (v2+)
-- `create_thread`, `manage_roles`, `pin_message`
-- `search_messages` (with content search)
-- `upload_file` (attachment support)
+**Messaging:**
+| Tool | Description |
+|------|-------------|
+| `send_dm` | Send a DM to a user as the bot |
+| `send_file` | Upload file or image attachment |
+
+**Channel Management:**
+| Tool | Description |
+|------|-------------|
+| `create_channel` | Create new text/voice/announcement channel |
+| `set_channel_topic` | Set channel topic |
+| `rename_channel` | Rename a channel |
+| `delete_channel` | Delete a channel |
+| `create_category` | Create channel category |
+| `move_channel` | Move channel to different category |
+
+**Reactions:**
+| Tool | Description |
+|------|-------------|
+| `get_reactions` | Get users who reacted with emoji |
+
+**Polls:**
+| Tool | Description |
+|------|-------------|
+| `create_poll` | Create poll in a channel |
+
+**Message Management:**
+| Tool | Description |
+|------|-------------|
+| `edit_message` | Edit entity's own message |
+| `delete_message` | Delete entity's own message |
+| `pin_message` | Pin message (requires permissions) |
+
+**Threads & Forums:**
+| Tool | Description |
+|------|-------------|
+| `create_thread` | Create thread from message or standalone |
+| `create_forum_post` | Create new forum post |
+| `list_forum_threads` | List active forum threads |
+
+**Attachments:**
+| Tool | Description |
+|------|-------------|
+| `fetch_attachment` | Download message attachment |
+
+**Moderation:**
+| Tool | Description |
+|------|-------------|
+| `timeout_user` | Timeout user (requires permissions) |
+| `assign_role` | Assign role to user (requires permissions) |
+| `remove_role` | Remove role from user (requires permissions) |
+
+**Awareness:**
+| Tool | Description |
+|------|-------------|
+| `search_messages` | Search message content in channels |
+| `list_members` | List server members |
+| `get_user_info` | Get info about a user |
+| `list_roles` | List server roles |
+
+**Total: 31 MCP tools** — all implemented in Phase 2.
+
+---
+
+## OAuth 2.1 Authorization Server
+
+Arachne acts as both Authorization Server (AS) and Resource Server (RS). Cloud platforms (ChatGPT, Claude.ai) use OAuth 2.1 to obtain access tokens. Local clients (Claude Desktop) continue using API keys directly.
+
+### Discovery Endpoints
+
+| Endpoint | RFC | Purpose |
+|----------|-----|---------|
+| `GET /.well-known/oauth-protected-resource` | RFC 9728 | Resource metadata — points clients to the AS |
+| `GET /.well-known/oauth-authorization-server` | RFC 8414 | AS metadata — authorization, token, and registration endpoints |
+
+### Authorization Flow
+
+```
+Client hits /mcp/:entity_id without auth
+  → 401 + WWW-Authenticate header with resource_metadata URL
+  → Client fetches /.well-known/oauth-protected-resource
+  → Client fetches /.well-known/oauth-authorization-server
+  → Client registers via POST /oauth/register (RFC 7591 DCR)
+  → Client opens GET /oauth/authorize (with PKCE code_challenge)
+  → Arachne redirects to Discord OAuth (identity verification)
+  → Discord callback → Arachne renders consent page (pick entity)
+  → User picks entity → auth code → redirect to client
+  → Client exchanges code + code_verifier at POST /oauth/token
+  → Arachne returns JWT access_token (1hr) + opaque refresh_token (30 days)
+  → Client uses Bearer token for MCP calls
+  → On expiry, client uses refresh_token (rotation — old token consumed)
+```
+
+### Token Details
+
+| Token | Format | Lifetime | Storage |
+|-------|--------|----------|---------|
+| Access token | JWT (HS256) | 1 hour | `oauth_access_tokens` table (for revocation tracking) |
+| Refresh token | Opaque (64-char hex) | 30 days | `oauth_refresh_tokens` table (consumed on use — rotation) |
+| Auth code | Opaque (64-char hex) | 10 minutes | `oauth_auth_codes` table (one-time use) |
+
+### JWT Access Token Claims
+
+```json
+{
+  "iss": "https://arachne-discord.fly.dev",
+  "sub": "<discord_user_id>",
+  "aud": "https://arachne-discord.fly.dev/mcp/<entity_id>",
+  "exp": 1234567890,
+  "iat": 1234567890,
+  "jti": "<uuid>",
+  "scope": "mcp",
+  "entity_id": "<entity_id>",
+  "client_id": "<registered_client_id>"
+}
+```
+
+### Consent Page
+
+Server-rendered HTML page on Fly.io (no frontend framework). Dark theme matching The Loom aesthetic. Shows:
+- Logged-in Discord user identity
+- Entity radio buttons (avatar, name, platform badge)
+- Authorize / Cancel buttons
+
+### Dual Auth on MCP Endpoint
+
+The `POST /mcp/:entity_id` handler accepts both auth methods:
+
+1. Try `jwt.verify(token)` → if valid JWT with matching `entity_id` and not revoked → authorized (OAuth)
+2. If JWT fails → try `verifyApiKey(token, entity.api_key_hash)` → if valid → authorized (API key)
+3. If both fail → 401 with `WWW-Authenticate` header
+
+### Discord OAuth Redirect URIs
+
+Both registered in Discord Developer Portal for the Arachne bot application:
+1. `https://arachne-loom.pages.dev/callback` — The Loom dashboard login
+2. `https://arachne-discord.fly.dev/oauth/discord-callback` — OAuth 2.1 consent flow
 
 ---
 
@@ -408,6 +601,7 @@ DISCORD_CLIENT_SECRET=    # OAuth2 client secret (for The Loom)
 JWT_SECRET=               # Dashboard session signing (random 64-char hex)
 OPERATOR_DISCORD_IDS=     # Comma-separated Discord user IDs for operator access
 DASHBOARD_URL=            # The Loom URL (https://arachne-loom.pages.dev)
+BASE_URL=                 # Public URL (https://arachne-discord.fly.dev)
 DATA_DIR=/data            # Persistent volume for SQLite + avatars
 ```
 
@@ -432,16 +626,24 @@ DATA_DIR=/data            # Persistent volume for SQLite + avatars
    → stores bcrypt(key) + salt in registry
    → returns: entity_id, api_key (shown once in modal, never stored)
 
-2. Entity owner configures their AI client with MCP URL + key
+2a. For local clients (Claude Desktop, Claude Code):
+   → Entity owner configures their AI client with MCP URL + key
    → MCP endpoint: /mcp/{entity_id}
    → Auth: Bearer {api_key}
+
+2b. For cloud platforms (ChatGPT, Claude.ai):
+   → Entity owner adds MCP URL in platform settings
+   → Platform auto-discovers OAuth via .well-known endpoints
+   → Platform registers via DCR, redirects user through consent flow
+   → User logs in with Discord, picks entity, authorizes
+   → Platform receives JWT access token, uses for MCP calls
 
 3. Entity owner requests server access via The Loom
    → server admin approves with channel/tool whitelist
    → Discord role auto-created for @mentions
 
 4. AI client connects to /mcp/{entity_id}
-   → server validates API key
+   → server validates API key or JWT
    → client can read messages and send as entity (within server admin's whitelist)
 
 5. Entity owner can: edit identity, regenerate key, set watch/blocked channels
@@ -492,9 +694,10 @@ DATA_DIR=/data            # Persistent volume for SQLite + avatars
 - **Application vetting:** server admin sees applicant Discord username before approving requests
 - **Entity namecard:** platform badge (Claude/GPT/Gemini/Other) + "partnered with @username" on entity cards and announcements
 - **ChannelPicker and ToolPicker:** always-visible lists with bidirectional "All" toggle (tick down from all OR tick up from zero)
-- **In progress:** Two-tier channel permission model (admin ceiling + owner fine-tuning), entity server detail view
-- **Deferred:** Activity feed
+- **Two-tier channel permission model:** admin ceiling (channels[], tools[]) + owner fine-tuning (watch_channels[], blocked_channels[])
 - **Custom role templates per server** (channel + tool whitelist presets, applied during entity approval)
+- **OAuth 2.1 authorization server** (RFC 7591 DCR, PKCE S256, JWT tokens) — auto-discovery for cloud platforms
+- **Deferred:** Activity feed
 
 ### Phase 4 — Polish & Scale
 - Multi-server support (one entity across multiple Discord servers)
