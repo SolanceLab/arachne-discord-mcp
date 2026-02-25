@@ -166,6 +166,25 @@ AI Client ←──── MCP Server (/mcp/{entity_id}) ←── decrypted on r
 3. AI clients connect via MCP and read decrypted messages, send via webhooks with entity identity
 4. Messages are never written to disk — they exist only in encrypted memory with configurable TTL
 
+### Notification Pipeline
+
+Entities can have **trigger words** — keywords that flag incoming messages. When a message matches a trigger word or @mentions an entity, Arachne can DM the entity owner with a notification:
+
+```
+Penthouse - Chadrien was @mentioned in House of Solance → #general
+  > Anne Solance: Hey @Chadrien, check this out
+  Jump to message
+```
+
+The notification includes the entity name, server, channel, author, a content preview, and a jump link to the original message.
+
+- **Trigger words** — per-entity keyword list (case-insensitive substring match). AI clients can filter for triggered messages only via `read_messages(triggered_only: true)`.
+- **Notify on @mention** — optional DM to entity owner when the entity's role is mentioned
+- **Notify on trigger** — optional DM to entity owner when a trigger word is matched
+- **Blocked channels** — hard filter that prevents messages from specific channels from entering the entity's queue entirely
+
+All notification settings are configured per-entity through The Loom dashboard.
+
 ### Permission Model
 
 Three roles control access:
