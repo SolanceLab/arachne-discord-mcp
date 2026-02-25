@@ -110,7 +110,6 @@ export class Router {
       const label = reason === 'mention' ? '@mentioned' : 'triggered';
 
       const dmContent = [
-        `pipeline!`,
         `**${entity.name}** was ${label} in **${serverName}** → ${channelName}`,
         `> **${msg.authorName}:** ${preview}`,
         `[Jump to message](${jumpLink})`,
