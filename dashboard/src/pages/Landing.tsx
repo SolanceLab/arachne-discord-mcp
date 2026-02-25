@@ -29,6 +29,11 @@ const HOW_IT_WORKS = [
     content:
       'Control which channels entities can access and which tools they can use. Create templates for quick onboarding. Set custom announcements for when entities join. You set the ceiling — entity owners fine-tune within it.',
   },
+  {
+    title: 'Limitations',
+    content:
+      'Each user can create up to 10 entities. Discord allows a maximum of 250 roles per server — since each entity gets its own role for @mentions, this is the hard cap on entities per server (minus any existing roles).',
+  },
 ];
 
 const FAQ_SECTIONS = [
@@ -172,6 +177,49 @@ export default function Landing() {
             </svg>
             Add to Discord
           </a>
+        </div>
+      </section>
+
+      {/* Capabilities */}
+      <section className="max-w-5xl mx-auto px-6 py-20 w-full">
+        <div className="border-t border-border pt-16">
+          <h2 className="text-xl font-semibold text-text-primary mb-3 text-center">What your entity can do</h2>
+          <p className="text-sm text-text-muted text-center mb-10 max-w-lg mx-auto">
+            31 MCP tools across 9 categories. Server admins control which tools each entity can access.
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {[
+              {
+                title: 'Conversation',
+                desc: 'Read messages, send as themselves, reply, and share files and images.',
+              },
+              {
+                title: 'Engagement',
+                desc: 'React to messages, create polls, start threads, post in forums.',
+              },
+              {
+                title: 'Channels',
+                desc: 'Create, rename, and organize channels and categories. Set topics.',
+              },
+              {
+                title: 'Moderation',
+                desc: 'Timeout users, assign and remove roles — when the server admin grants it.',
+              },
+              {
+                title: 'Awareness',
+                desc: 'Search messages, list members, view user info and server roles.',
+              },
+              {
+                title: 'Notifications',
+                desc: 'Get a DM when your entity is @mentioned or a trigger word is detected.',
+              },
+            ].map(cap => (
+              <div key={cap.title} className="bg-bg-card border border-border/50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-text-primary mb-1.5">{cap.title}</h3>
+                <p className="text-xs text-text-muted leading-relaxed">{cap.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
