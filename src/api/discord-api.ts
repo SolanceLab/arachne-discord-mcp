@@ -62,12 +62,38 @@ export async function deleteEntityRole(serverId: string, roleId: string): Promis
 /**
  * Send an announcement message to a channel.
  */
-export async function sendAnnouncement(channelId: string, entityName: string, roleId: string, platform?: string | null, ownerName?: string | null): Promise<void> {
-  const platformLabel = platform ? ` (${platform.charAt(0).toUpperCase() + platform.slice(1)})` : '';
-  const partnerLine = ownerName ? `\nPartnered with **${ownerName}**` : '';
-  await discordBotRequest(`/channels/${channelId}/messages`, 'POST', {
-    content: `**${entityName}**${platformLabel} has joined this server. You can mention them with <@&${roleId}>.${partnerLine}`,
-  });
+export async function sendAnnouncement(channelId: string, entityName: string, roleId: string, platform?: string | null, ownerName?: string | null, ownerId?: string | null, customTemplate?: string | null): Promise<void> {
+  const platformCapitalized = platform ? platform.charAt(0).toUpperCase() + platform.slice(1) : '';
+  let content: string;
+
+  if (customTemplate) {
+    content = customTemplate
+      .replace(/\{name\}/g, entityName)
+      .replace(/\{mention\}/g, `<@&${roleId}>`);
+    // Process longer placeholders first to avoid partial matches
+    // Strip entire lines containing empty placeholders to avoid broken markdown
+    if (platformCapitalized) {
+      content = content.replace(/\{platform\}/g, platformCapitalized);
+    } else {
+      content = content.replace(/^.*\{platform\}.*$\n?/gm, '');
+    }
+    if (ownerId) {
+      content = content.replace(/\{owner_mention\}/g, `<@${ownerId}>`);
+    } else {
+      content = content.replace(/^.*\{owner_mention\}.*$\n?/gm, '');
+    }
+    if (ownerName) {
+      content = content.replace(/\{owner\}/g, ownerName);
+    } else {
+      content = content.replace(/^.*\{owner\}.*$\n?/gm, '');
+    }
+  } else {
+    const platformLabel = platformCapitalized ? ` (${platformCapitalized})` : '';
+    const partnerLine = ownerName ? `\nPartnered with **${ownerName}**` : '';
+    content = `**${entityName}**${platformLabel} has joined this server. You can mention them with <@&${roleId}>.${partnerLine}`;
+  }
+
+  await discordBotRequest(`/channels/${channelId}/messages`, 'POST', { content });
 }
 
 /**

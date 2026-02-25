@@ -84,6 +84,7 @@ export class EntityRegistry {
       CREATE TABLE IF NOT EXISTS server_settings (
         server_id        TEXT PRIMARY KEY,
         announce_channel TEXT,
+        announce_message TEXT,
         default_template TEXT
       );
     `);
@@ -106,6 +107,12 @@ export class EntityRegistry {
     if (!srCols.some(c => c.name === 'requested_by_name')) {
       this.db.exec("ALTER TABLE server_requests ADD COLUMN requested_by_name TEXT DEFAULT NULL");
       logger.info('Migration: added requested_by_name column to server_requests');
+    }
+
+    const ssCols = this.db.prepare("PRAGMA table_info(server_settings)").all() as Array<{ name: string }>;
+    if (!ssCols.some(c => c.name === 'announce_message')) {
+      this.db.exec("ALTER TABLE server_settings ADD COLUMN announce_message TEXT DEFAULT NULL");
+      logger.info('Migration: added announce_message column to server_settings');
     }
 
     // Server templates table (custom role templates per server)
@@ -425,23 +432,25 @@ export class EntityRegistry {
    */
   getServerSettings(serverId: string): ServerSettings {
     const row = this.db.prepare('SELECT * FROM server_settings WHERE server_id = ?').get(serverId) as ServerSettings | undefined;
-    return row || { server_id: serverId, announce_channel: null, default_template: null };
+    return row || { server_id: serverId, announce_channel: null, announce_message: null, default_template: null };
   }
 
   /**
    * Update server-level settings (upsert).
    */
-  updateServerSettings(serverId: string, settings: { announce_channel?: string | null; default_template?: string | null }): ServerSettings {
+  updateServerSettings(serverId: string, settings: { announce_channel?: string | null; announce_message?: string | null; default_template?: string | null }): ServerSettings {
     const existing = this.getServerSettings(serverId);
     this.db.prepare(`
-      INSERT INTO server_settings (server_id, announce_channel, default_template)
-      VALUES (?, ?, ?)
+      INSERT INTO server_settings (server_id, announce_channel, announce_message, default_template)
+      VALUES (?, ?, ?, ?)
       ON CONFLICT(server_id) DO UPDATE SET
         announce_channel = excluded.announce_channel,
+        announce_message = excluded.announce_message,
         default_template = excluded.default_template
     `).run(
       serverId,
       settings.announce_channel !== undefined ? settings.announce_channel : existing.announce_channel,
+      settings.announce_message !== undefined ? settings.announce_message : existing.announce_message,
       settings.default_template !== undefined ? settings.default_template : existing.default_template,
     );
     return this.getServerSettings(serverId);
@@ -466,6 +475,20 @@ export class EntityRegistry {
       VALUES (?, ?, ?, ?, ?)
     `).run(id, serverId, name, JSON.stringify(channels), JSON.stringify(tools));
     return this.getServerTemplate(id)!;
+  }
+
+  updateServerTemplate(templateId: string, fields: { name?: string; channels?: string[]; tools?: string[] }): ServerTemplate | null {
+    const existing = this.getServerTemplate(templateId);
+    if (!existing) return null;
+    this.db.prepare(`
+      UPDATE server_templates SET name = ?, channels = ?, tools = ? WHERE id = ?
+    `).run(
+      fields.name ?? existing.name,
+      fields.channels ? JSON.stringify(fields.channels) : existing.channels,
+      fields.tools ? JSON.stringify(fields.tools) : existing.tools,
+      templateId
+    );
+    return this.getServerTemplate(templateId)!;
   }
 
   deleteServerTemplate(templateId: string): boolean {

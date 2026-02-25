@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const TOOL_GROUPS = [
   {
@@ -54,6 +54,12 @@ interface ToolPickerProps {
 export default function ToolPicker({ selected, onChange, label = 'Tool whitelist' }: ToolPickerProps) {
   const [allMode, setAllMode] = useState(selected.length === 0);
 
+  // Sync allMode when selected prop changes externally (e.g. template apply)
+  useEffect(() => {
+    if (selected.length === 0) setAllMode(true);
+    else setAllMode(false);
+  }, [selected]);
+
   const toggleTool = (tool: string) => {
     if (allMode) {
       setAllMode(false);
@@ -84,6 +90,7 @@ export default function ToolPicker({ selected, onChange, label = 'Tool whitelist
           onChange={() => {
             if (allMode) {
               setAllMode(false);
+              onChange([...ALL_TOOLS]);
             } else {
               setAllMode(true);
               onChange([]);

@@ -27,6 +27,12 @@ export default function ChannelPicker({ serverId, selected, onChange, channels: 
   const allIds = channels.map(c => c.id);
   const [allMode, setAllMode] = useState(selected.length === 0 && allowAll);
 
+  // Sync allMode when selected prop changes externally (e.g. template apply)
+  useEffect(() => {
+    if (selected.length === 0 && allowAll) setAllMode(true);
+    else if (selected.length > 0) setAllMode(false);
+  }, [selected, allowAll]);
+
   useEffect(() => {
     if (propChannels) return;
     setLoading(true);
@@ -100,6 +106,7 @@ export default function ChannelPicker({ serverId, selected, onChange, channels: 
             onChange={() => {
             if (allMode) {
               setAllMode(false);
+              onChange(allIds);
             } else {
               setAllMode(true);
               onChange([]);

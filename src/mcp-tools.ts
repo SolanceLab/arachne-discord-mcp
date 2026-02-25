@@ -154,7 +154,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
   // --- get_entity_info ---
   server.tool(
     'get_entity_info',
-    'Get information about this entity (name, avatar, servers, channels).',
+    'Get information about this entity — identity, description, platform, partner, servers, and channels. Call this at the start of a session to understand who you are.',
     {},
     async () => {
       const servers = entityServers.map(es => ({
@@ -169,11 +169,63 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
           text: JSON.stringify({
             id: entity.id,
             name: entity.name,
+            description: entity.description || null,
+            platform: entity.platform || null,
+            partner: entity.owner_name || null,
             avatar_url: entity.avatar_url,
             servers,
           }, null, 2),
         }],
       };
+    }
+  );
+
+  // --- introduce ---
+  server.tool(
+    'introduce',
+    'Post a rich namecard embed in a channel introducing this entity. Shows name, description, platform, and partner. Use this when joining a new channel or when someone asks who you are.',
+    {
+      channel_id: z.string().describe('The channel ID to post the introduction in'),
+    },
+    async ({ channel_id }) => {
+      if (!canAccessChannel(channel_id)) {
+        return { content: [{ type: 'text' as const, text: 'Error: You do not have access to this channel.' }] };
+      }
+      try {
+        const platformLabels: Record<string, string> = { claude: 'Claude', gpt: 'GPT', gemini: 'Gemini', other: 'Other' };
+        const platformColors: Record<string, number> = { claude: 0xD97757, gpt: 0x10A37F, gemini: 0x4285F4, other: 0x6B7280 };
+
+        const embedColor = entity.platform ? (platformColors[entity.platform] || 0x5865F2) :
+                          entity.accent_color ? parseInt(entity.accent_color.replace('#', ''), 16) : 0x5865F2;
+
+        const fields: Array<{ name: string; value: string; inline: boolean }> = [];
+        if (entity.platform) {
+          fields.push({ name: 'Platform', value: platformLabels[entity.platform] || entity.platform, inline: true });
+        }
+        if (entity.owner_name) {
+          fields.push({ name: 'Partner', value: entity.owner_name, inline: true });
+        }
+
+        const result = await webhookManager.sendEmbedAsEntity(
+          channel_id,
+          entity.name,
+          entity.avatar_url,
+          [{
+            description: entity.description || undefined,
+            color: embedColor,
+            fields: fields.length > 0 ? fields : undefined,
+            footer: { text: 'Powered by Arachne' },
+          }]
+        );
+
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ success: true, message_id: result.messageId }) }],
+        };
+      } catch (err) {
+        return {
+          content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }],
+        };
+      }
     }
   );
 

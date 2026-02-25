@@ -106,6 +106,27 @@ export class WebhookManager {
   }
 
   /**
+   * Send an embed as a specific entity (for namecards, introductions, etc).
+   */
+  async sendEmbedAsEntity(
+    channelId: string,
+    entityName: string,
+    entityAvatarUrl: string | null | undefined,
+    embeds: Array<Record<string, unknown>>
+  ): Promise<{ messageId: string }> {
+    const webhook = await this.getWebhook(channelId);
+
+    const msg = await webhook.send({
+      username: entityName,
+      avatarURL: entityAvatarUrl || undefined,
+      embeds,
+      allowedMentions: { parse: [] },
+    });
+
+    return { messageId: msg.id };
+  }
+
+  /**
    * Invalidate cached webhook for a channel.
    */
   invalidateChannel(channelId: string): void {

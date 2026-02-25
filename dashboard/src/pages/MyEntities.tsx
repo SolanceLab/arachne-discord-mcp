@@ -58,10 +58,16 @@ export default function MyEntities() {
   const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
   const createFileRef = useRef<HTMLInputElement>(null);
 
+  // Avatar upload
+  const [uploadingAvatar, setUploadingAvatar] = useState<string | null>(null);
+
   // Server request
   const [requestingFor, setRequestingFor] = useState<string | null>(null);
   const [availableServers, setAvailableServers] = useState<AvailableServer[]>([]);
   const [loadingServers, setLoadingServers] = useState(false);
+
+  // Connect panel
+  const [connectingFor, setConnectingFor] = useState<string | null>(null);
 
   // Server detail panel
   const [expandedEntity, setExpandedEntity] = useState<string | null>(null);
@@ -92,7 +98,11 @@ export default function MyEntities() {
     setApiKey(data.api_key);
 
     if (newAvatarFile) {
-      await uploadAvatar(data.id, newAvatarFile);
+      try {
+        await uploadAvatar(data.id, newAvatarFile);
+      } catch {
+        // Entity created but avatar failed — user can retry from the card
+      }
     }
 
     setShowCreate(false);
@@ -108,16 +118,27 @@ export default function MyEntities() {
     const formData = new FormData();
     formData.append('avatar', file);
     const token = localStorage.getItem('loom_token');
-    await fetch(`${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/api/entities/${entityId}/avatar`, {
+    const resp = await fetch(`${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/api/entities/${entityId}/avatar`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData,
     });
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      throw new Error(data.error || `Upload failed (${resp.status})`);
+    }
   };
 
   const handleAvatarUpload = async (entityId: string, file: File) => {
-    await uploadAvatar(entityId, file);
-    fetchEntities();
+    setUploadingAvatar(entityId);
+    try {
+      await uploadAvatar(entityId, file);
+      fetchEntities();
+    } catch (err) {
+      alert(`Avatar upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setUploadingAvatar(null);
+    }
   };
 
   const handleRegenKey = async (entityId: string) => {
@@ -395,7 +416,7 @@ export default function MyEntities() {
                     style={{ backgroundColor: entity.accent_color || '#5865F2' }}
                   >
                     {/* Avatar */}
-                    <div className="absolute -bottom-8 left-4">
+                    <div className="absolute -bottom-8 left-4 z-10">
                       <input
                         type="file"
                         accept="image/png,image/jpeg,image/gif,image/webp"
@@ -408,7 +429,11 @@ export default function MyEntities() {
                         id={`avatar-${entity.id}`}
                       />
                       <label htmlFor={`avatar-${entity.id}`} className="cursor-pointer block">
-                        {entity.avatar_url ? (
+                        {uploadingAvatar === entity.id ? (
+                          <div className="w-16 h-16 rounded-full bg-bg-deep border-4 border-bg-card flex items-center justify-center">
+                            <div className="w-5 h-5 border-2 border-text-muted border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        ) : entity.avatar_url ? (
                           <img
                             src={entity.avatar_url}
                             alt=""
@@ -432,8 +457,14 @@ export default function MyEntities() {
                       Edit
                     </button>
                     <button
+                      onClick={() => setConnectingFor(connectingFor === entity.id ? null : entity.id)}
+                      className={`px-2.5 py-1 text-xs rounded transition-colors ${connectingFor === entity.id ? 'bg-accent text-white' : 'bg-bg-surface hover:bg-border text-accent'}`}
+                    >
+                      Connect
+                    </button>
+                    <button
                       onClick={() => openServerRequest(entity.id)}
-                      className="px-2.5 py-1 text-xs bg-bg-surface hover:bg-border text-accent rounded transition-colors"
+                      className="px-2.5 py-1 text-xs bg-bg-surface hover:bg-border text-text-muted rounded transition-colors"
                     >
                       Join Server
                     </button>
@@ -485,6 +516,80 @@ export default function MyEntities() {
                     </div>
                   )}
 
+                  {/* Connect panel */}
+                  {connectingFor === entity.id && (
+                    <div className="mx-4 mt-2 p-3 bg-bg-deep border border-accent/30 rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-medium text-accent">Connect your AI</p>
+                        <button
+                          onClick={() => setConnectingFor(null)}
+                          className="text-xs text-text-muted hover:text-text-primary"
+                        >
+                          Close
+                        </button>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase tracking-wider text-text-muted font-medium block mb-1">MCP Endpoint</label>
+                        <div className="flex items-center gap-1.5">
+                          <code className="text-xs text-accent bg-bg-card px-2 py-1 rounded border border-border flex-1 overflow-x-auto whitespace-nowrap">
+                            {`${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/mcp/${entity.id}`}
+                          </code>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(`${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/mcp/${entity.id}`)}
+                            className="px-2 py-1 text-xs bg-bg-card hover:bg-border border border-border rounded transition-colors shrink-0"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase tracking-wider text-text-muted font-medium block mb-1">Claude Desktop</label>
+                        <div className="relative">
+                          <pre className="text-[11px] text-text-primary bg-bg-card px-2.5 py-2 rounded border border-border overflow-x-auto whitespace-pre">{`{
+  "mcpServers": {
+    "${entity.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}": {
+      "url": "${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/mcp/${entity.id}",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      }
+    }
+  }
+}`}</pre>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(JSON.stringify({
+                              mcpServers: {
+                                [entity.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')]: {
+                                  url: `${import.meta.env.VITE_API_URL || 'https://arachne-discord.fly.dev'}/mcp/${entity.id}`,
+                                  headers: { Authorization: 'Bearer YOUR_API_KEY' },
+                                },
+                              },
+                            }, null, 2))}
+                            className="absolute top-1.5 right-1.5 px-2 py-0.5 text-[10px] bg-bg-surface hover:bg-border border border-border rounded transition-colors"
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] uppercase tracking-wider text-text-muted font-medium block mb-1">Claude.ai / ChatGPT</label>
+                        <ol className="text-xs text-text-muted space-y-0.5 list-decimal list-inside">
+                          <li>Go to <span className="text-text-primary">Settings &gt; MCP Servers</span> (or Connected Apps)</li>
+                          <li>Add server with the endpoint URL above</li>
+                          <li>Auth type: <span className="text-text-primary">Bearer Token</span></li>
+                          <li>Token: <span className="text-text-primary">your API key</span></li>
+                        </ol>
+                      </div>
+
+                      <p className="text-[10px] text-text-muted">
+                        Replace <code className="text-warning">YOUR_API_KEY</code> with the key you received when creating this entity.
+                        Lost it? Click <span className="text-warning">Regen Key</span> to get a new one.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Profile info */}
                   <div className="px-4 pt-4 pb-4">
                     <h3 className="font-bold text-lg">{entity.name}</h3>
@@ -521,9 +626,6 @@ export default function MyEntities() {
                         </span>
                         {entity.servers.length} server{entity.servers.length !== 1 ? 's' : ''}
                       </button>
-                      <p className="text-xs text-text-muted">
-                        MCP: <code className="text-accent">/mcp/{entity.id}</code>
-                      </p>
                     </div>
 
                     {/* Expanded server detail */}

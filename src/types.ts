@@ -103,6 +103,7 @@ export interface ServerRequest {
 export interface ServerSettings {
   server_id: string;
   announce_channel: string | null;
+  announce_message: string | null; // custom template with {name}, {mention}, {platform}, {owner} placeholders
   default_template: string | null; // template ID or null
 }
 

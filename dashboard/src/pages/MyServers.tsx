@@ -50,6 +50,7 @@ interface ServerTemplateData {
 interface ServerSettingsData {
   server_id: string;
   announce_channel: string | null;
+  announce_message: string | null;
   default_template: string | null;
 }
 
@@ -67,6 +68,7 @@ export default function MyServers() {
   // Templates
   const [templates, setTemplates] = useState<ServerTemplateData[]>([]);
   const [templateBuilderOpen, setTemplateBuilderOpen] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [templateChannels, setTemplateChannels] = useState<string[]>([]);
   const [templateTools, setTemplateTools] = useState<string[]>([]);
@@ -135,15 +137,35 @@ export default function MyServers() {
 
   const saveTemplate = async () => {
     if (!selectedServer || !newTemplateName.trim()) return;
-    const created = await apiFetch<ServerTemplateData>(`/api/servers/${selectedServer}/templates`, {
-      method: 'POST',
-      body: JSON.stringify({ name: newTemplateName.trim(), channels: templateChannels, tools: templateTools }),
-    });
-    setTemplates(prev => [created, ...prev]);
+
+    if (editingTemplateId) {
+      // Update existing
+      const updated = await apiFetch<ServerTemplateData>(`/api/servers/${selectedServer}/templates/${editingTemplateId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: newTemplateName.trim(), channels: templateChannels, tools: templateTools }),
+      });
+      setTemplates(prev => prev.map(t => t.id === editingTemplateId ? updated : t));
+    } else {
+      // Create new
+      const created = await apiFetch<ServerTemplateData>(`/api/servers/${selectedServer}/templates`, {
+        method: 'POST',
+        body: JSON.stringify({ name: newTemplateName.trim(), channels: templateChannels, tools: templateTools }),
+      });
+      setTemplates(prev => [created, ...prev]);
+    }
     setNewTemplateName('');
     setTemplateChannels([]);
     setTemplateTools([]);
+    setEditingTemplateId(null);
     setTemplateBuilderOpen(false);
+  };
+
+  const editTemplate = (template: ServerTemplateData) => {
+    setEditingTemplateId(template.id);
+    setNewTemplateName(template.name);
+    setTemplateChannels(template.channels);
+    setTemplateTools(template.tools);
+    setTemplateBuilderOpen(true);
   };
 
   const deleteTemplate = async (templateId: string) => {
@@ -262,6 +284,29 @@ export default function MyServers() {
                 </select>
               </div>
 
+              {/* Announcement message */}
+              {serverSettings.announce_channel && (
+                <div>
+                  <label className="text-xs text-text-muted block mb-1.5">
+                    Announcement message
+                  </label>
+                  <p className="text-xs text-text-muted mb-2">
+                    Placeholders: <code className="text-accent">{'{name}'}</code> <code className="text-accent">{'{mention}'}</code> <code className="text-accent">{'{platform}'}</code> <code className="text-accent">{'{owner}'}</code> <code className="text-accent">{'{owner_mention}'}</code>
+                  </p>
+                  <textarea
+                    value={serverSettings.announce_message || ''}
+                    onChange={e => setServerSettings(prev => prev ? { ...prev, announce_message: e.target.value || null } : prev)}
+                    onBlur={e => saveSettings({ announce_message: e.target.value || null })}
+                    placeholder="**{name}** ({platform}) has joined this server. You can mention them with {mention}.&#10;Partnered with **{owner}**"
+                    rows={3}
+                    className="w-full bg-bg-deep border border-border rounded px-3 py-1.5 text-sm font-mono resize-y"
+                  />
+                  <p className="text-[10px] text-text-muted mt-1">
+                    Leave empty for default message. Supports Discord markdown.
+                  </p>
+                </div>
+              )}
+
               {/* Default template */}
               {templates.length > 0 && (
                 <div>
@@ -289,7 +334,21 @@ export default function MyServers() {
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs text-text-muted">Role Templates</label>
                   <button
-                    onClick={() => setTemplateBuilderOpen(!templateBuilderOpen)}
+                    onClick={() => {
+                      if (templateBuilderOpen) {
+                        setTemplateBuilderOpen(false);
+                        setEditingTemplateId(null);
+                        setNewTemplateName('');
+                        setTemplateChannels([]);
+                        setTemplateTools([]);
+                      } else {
+                        setEditingTemplateId(null);
+                        setNewTemplateName('');
+                        setTemplateChannels([]);
+                        setTemplateTools([]);
+                        setTemplateBuilderOpen(true);
+                      }
+                    }}
                     className="text-xs text-accent hover:text-accent-hover transition-colors"
                   >
                     {templateBuilderOpen ? 'Cancel' : '+ New Template'}
@@ -321,7 +380,7 @@ export default function MyServers() {
                       disabled={!newTemplateName.trim()}
                       className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-40 text-white text-sm rounded transition-colors"
                     >
-                      Save Template
+                      {editingTemplateId ? 'Update Template' : 'Save Template'}
                     </button>
                   </div>
                 )}
@@ -341,12 +400,20 @@ export default function MyServers() {
                             {t.tools.length === 0 ? 'All tools' : `${t.tools.length} tools`}
                           </p>
                         </div>
-                        <button
-                          onClick={() => deleteTemplate(t.id)}
-                          className="text-xs text-danger hover:text-danger/80 transition-colors"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => editTemplate(t)}
+                            className="text-xs text-accent hover:text-accent-hover transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteTemplate(t.id)}
+                            className="text-xs text-danger hover:text-danger/80 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -390,7 +457,7 @@ export default function MyServers() {
                           </div>
                           <p className="text-xs text-text-muted">
                             by <span className="text-text-primary">
-                              {req.requested_by_name ? `@${req.requested_by_name}` : req.requested_by}
+                              {req.requested_by_name ? `@${req.requested_by_name} (${req.requested_by})` : req.requested_by}
                             </span> · Requested {new Date(req.created_at).toLocaleDateString()}
                           </p>
                         </div>

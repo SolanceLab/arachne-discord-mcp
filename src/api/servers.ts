@@ -66,9 +66,10 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
 
   // PATCH /api/servers/:id/settings — update server-level settings
   router.patch('/:id/settings', requireServerAdmin, (req: Request, res: Response) => {
-    const { announce_channel, default_template } = req.body;
+    const { announce_channel, announce_message, default_template } = req.body;
     const updated = registry.updateServerSettings(req.params.id as string, {
       announce_channel,
+      announce_message,
       default_template,
     });
     res.json(updated);
@@ -146,7 +147,7 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
       const serverSettings = registry.getServerSettings(request.server_id);
       if (serverSettings.announce_channel && roleId) {
         try {
-          await sendAnnouncement(serverSettings.announce_channel, entity.name, roleId, entity.platform, entity.owner_name);
+          await sendAnnouncement(serverSettings.announce_channel, entity.name, roleId, entity.platform, entity.owner_name, entity.owner_id, serverSettings.announce_message);
         } catch (err) {
           logger.warn(`Announcement failed: ${err}`);
         }
@@ -196,6 +197,22 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
       ...template,
       channels: JSON.parse(template.channels),
       tools: JSON.parse(template.tools),
+    });
+  });
+
+  // PATCH /api/servers/:id/templates/:tid — update a template
+  router.patch('/:id/templates/:tid', requireServerAdmin, (req: Request, res: Response) => {
+    const template = registry.getServerTemplate(req.params.tid as string);
+    if (!template || template.server_id !== (req.params.id as string)) {
+      res.status(404).json({ error: 'Template not found' });
+      return;
+    }
+    const { name, channels, tools } = req.body;
+    const updated = registry.updateServerTemplate(template.id, { name, channels, tools });
+    res.json({
+      ...updated!,
+      channels: JSON.parse(updated!.channels),
+      tools: JSON.parse(updated!.tools),
     });
   });
 

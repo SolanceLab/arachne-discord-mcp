@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import sharp from 'sharp';
 import type { Client } from 'discord.js';
 import { requireAuth } from './middleware.js';
 import type { EntityRegistry } from '../entity-registry.js';
@@ -23,7 +24,7 @@ const upload = multer({
       cb(null, `tmp-${Date.now()}${ext}`);
     },
   }),
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8MB
   fileFilter: (_req, file, cb) => {
     const allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
     cb(null, allowed.includes(file.mimetype));
@@ -152,11 +153,22 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
     }
     const { name, avatar_url, description, accent_color, platform } = req.body;
     registry.updateEntityIdentity(entity.id, { name, avatarUrl: avatar_url, description, accentColor: accent_color, platform });
+    // Re-stamp owner_name from current user (backfills old entities + handles username changes)
+    registry.setEntityOwner(entity.id, entity.owner_id, req.user!.username);
     res.json({ success: true });
   });
 
   // POST /api/entities/:id/avatar — upload avatar image
-  router.post('/:id/avatar', upload.single('avatar'), (req: Request, res: Response) => {
+  router.post('/:id/avatar', (req: Request, res: Response, next) => {
+    upload.single('avatar')(req, res, (err) => {
+      if (err) {
+        const msg = err.code === 'LIMIT_FILE_SIZE' ? 'File too large (max 8MB)' : err.message;
+        res.status(400).json({ error: msg });
+        return;
+      }
+      next();
+    });
+  }, async (req: Request, res: Response) => {
     const entity = registry.getEntity(req.params.id as string);
     if (!entity || !entity.active) {
       res.status(404).json({ error: 'Entity not found' });
@@ -171,21 +183,27 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
       return;
     }
 
-    // Rename temp file to entity ID
-    const ext = path.extname(req.file.originalname) || '.png';
-    const finalName = `${entity.id}${ext}`;
+    // Always save as WebP (good compression, universal support)
+    const finalName = `${entity.id}.webp`;
     const finalPath = path.join(AVATAR_DIR, finalName);
 
-    // Remove old avatar if different extension
+    // Remove old avatar files for this entity
     try {
       for (const old of fs.readdirSync(AVATAR_DIR)) {
-        if (old.startsWith(entity.id) && old !== finalName) {
+        if (old.startsWith(entity.id)) {
           fs.unlinkSync(path.join(AVATAR_DIR, old));
         }
       }
     } catch { /* ignore */ }
 
-    fs.renameSync(req.file.path, finalPath);
+    // Resize to 512x512 max and convert to WebP
+    await sharp(req.file.path)
+      .resize(512, 512, { fit: 'cover' })
+      .webp({ quality: 85 })
+      .toFile(finalPath);
+
+    // Clean up temp upload
+    fs.unlinkSync(req.file.path);
 
     const avatarUrl = `${AVATAR_BASE_URL}/${finalName}`;
     registry.updateEntityIdentity(entity.id, { avatarUrl });
