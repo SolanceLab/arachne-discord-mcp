@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { v4 as uuidv4 } from 'uuid';
 import { generateApiKey, generateSalt, hashApiKey } from './crypto.js';
 import { logger } from './logger.js';
-import type { Entity, EntityServer } from './types.js';
+import type { Entity, EntityServer, ServerRequest, ServerSettings, ServerTemplate } from './types.js';
 
 export class EntityRegistry {
   private db: Database.Database;
@@ -38,12 +38,75 @@ export class EntityRegistry {
         ON entity_servers(server_id);
     `);
 
-    // Migration: add role_id column if missing
-    const columns = this.db.prepare("PRAGMA table_info(entity_servers)").all() as Array<{ name: string }>;
-    if (!columns.some(c => c.name === 'role_id')) {
+    // Migrations
+    const esCols = this.db.prepare("PRAGMA table_info(entity_servers)").all() as Array<{ name: string }>;
+    if (!esCols.some(c => c.name === 'role_id')) {
       this.db.exec("ALTER TABLE entity_servers ADD COLUMN role_id TEXT DEFAULT NULL");
       logger.info('Migration: added role_id column to entity_servers');
     }
+    if (!esCols.some(c => c.name === 'announce_channel')) {
+      this.db.exec("ALTER TABLE entity_servers ADD COLUMN announce_channel TEXT DEFAULT NULL");
+      logger.info('Migration: added announce_channel column to entity_servers');
+    }
+    if (!esCols.some(c => c.name === 'watch_channels')) {
+      this.db.exec("ALTER TABLE entity_servers ADD COLUMN watch_channels TEXT DEFAULT '[]'");
+      logger.info('Migration: added watch_channels column to entity_servers');
+    }
+    if (!esCols.some(c => c.name === 'blocked_channels')) {
+      this.db.exec("ALTER TABLE entity_servers ADD COLUMN blocked_channels TEXT DEFAULT '[]'");
+      logger.info('Migration: added blocked_channels column to entity_servers');
+    }
+
+    const eCols = this.db.prepare("PRAGMA table_info(entities)").all() as Array<{ name: string }>;
+    if (!eCols.some(c => c.name === 'owner_id')) {
+      this.db.exec("ALTER TABLE entities ADD COLUMN owner_id TEXT DEFAULT NULL");
+      logger.info('Migration: added owner_id column to entities');
+    }
+    if (!eCols.some(c => c.name === 'description')) {
+      this.db.exec("ALTER TABLE entities ADD COLUMN description TEXT DEFAULT NULL");
+      logger.info('Migration: added description column to entities');
+    }
+    if (!eCols.some(c => c.name === 'accent_color')) {
+      this.db.exec("ALTER TABLE entities ADD COLUMN accent_color TEXT DEFAULT NULL");
+      logger.info('Migration: added accent_color column to entities');
+    }
+
+    // Server settings table (per-server admin config)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS server_settings (
+        server_id        TEXT PRIMARY KEY,
+        announce_channel TEXT,
+        default_template TEXT
+      );
+    `);
+
+    // Server requests table (for entity-to-server access flow)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS server_requests (
+        id           TEXT PRIMARY KEY,
+        entity_id    TEXT NOT NULL REFERENCES entities(id),
+        server_id    TEXT NOT NULL,
+        status       TEXT NOT NULL DEFAULT 'pending',
+        requested_by TEXT NOT NULL,
+        reviewed_by  TEXT,
+        created_at   TEXT DEFAULT (datetime('now')),
+        reviewed_at  TEXT
+      );
+    `);
+
+    // Server templates table (custom role templates per server)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS server_templates (
+        id         TEXT PRIMARY KEY,
+        server_id  TEXT NOT NULL,
+        name       TEXT NOT NULL,
+        channels   TEXT DEFAULT '[]',
+        tools      TEXT DEFAULT '[]',
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_server_templates_server
+        ON server_templates(server_id);
+    `);
 
     logger.info('Entity registry initialized');
   }
@@ -196,6 +259,212 @@ export class EntityRegistry {
       const channels: string[] = JSON.parse(row.channels);
       return channels.length === 0 || channels.includes(channelId);
     });
+  }
+
+  // --- Dashboard methods ---
+
+  /**
+   * Get all entities owned by a Discord user.
+   */
+  getEntitiesByOwner(ownerId: string): Entity[] {
+    return this.db.prepare(
+      'SELECT * FROM entities WHERE owner_id = ? AND active = 1 ORDER BY created_at DESC'
+    ).all(ownerId) as Entity[];
+  }
+
+  /**
+   * Set or change the owner of an entity.
+   */
+  setEntityOwner(entityId: string, ownerId: string | null): boolean {
+    const result = this.db.prepare(
+      'UPDATE entities SET owner_id = ? WHERE id = ?'
+    ).run(ownerId, entityId);
+    return result.changes > 0;
+  }
+
+  /**
+   * Update entity identity (name and/or avatar).
+   */
+  updateEntityIdentity(entityId: string, fields: {
+    name?: string;
+    avatarUrl?: string | null;
+    description?: string | null;
+    accentColor?: string | null;
+  }): boolean {
+    const entity = this.getEntity(entityId);
+    if (!entity) return false;
+
+    this.db.prepare(
+      'UPDATE entities SET name = ?, avatar_url = ?, description = ?, accent_color = ? WHERE id = ?'
+    ).run(
+      fields.name ?? entity.name,
+      fields.avatarUrl !== undefined ? fields.avatarUrl : entity.avatar_url,
+      fields.description !== undefined ? fields.description : entity.description,
+      fields.accentColor !== undefined ? fields.accentColor : entity.accent_color,
+      entityId,
+    );
+    return true;
+  }
+
+  /**
+   * Get all entities on a specific server (with owner info).
+   */
+  getEntitiesForServer(serverId: string): Array<Entity & { channels: string; tools: string; watch_channels: string; blocked_channels: string; role_id: string | null }> {
+    return this.db.prepare(`
+      SELECT e.*, es.channels, es.tools, es.watch_channels, es.blocked_channels, es.role_id
+      FROM entities e
+      JOIN entity_servers es ON e.id = es.entity_id
+      WHERE es.server_id = ? AND e.active = 1
+    `).all(serverId) as Array<Entity & { channels: string; tools: string; watch_channels: string; blocked_channels: string; role_id: string | null }>;
+  }
+
+  /**
+   * Create a server access request.
+   */
+  createServerRequest(entityId: string, serverId: string, requestedBy: string): ServerRequest {
+    const id = uuidv4();
+    this.db.prepare(`
+      INSERT INTO server_requests (id, entity_id, server_id, requested_by)
+      VALUES (?, ?, ?, ?)
+    `).run(id, entityId, serverId, requestedBy);
+    return this.db.prepare('SELECT * FROM server_requests WHERE id = ?').get(id) as ServerRequest;
+  }
+
+  /**
+   * Get server requests by server and status.
+   */
+  getServerRequests(serverId: string, status?: string): ServerRequest[] {
+    if (status) {
+      return this.db.prepare(
+        'SELECT * FROM server_requests WHERE server_id = ? AND status = ? ORDER BY created_at DESC'
+      ).all(serverId, status) as ServerRequest[];
+    }
+    return this.db.prepare(
+      'SELECT * FROM server_requests WHERE server_id = ? ORDER BY created_at DESC'
+    ).all(serverId) as ServerRequest[];
+  }
+
+  /**
+   * Update a server request status.
+   */
+  updateServerRequest(requestId: string, status: string, reviewedBy: string): boolean {
+    const result = this.db.prepare(`
+      UPDATE server_requests SET status = ?, reviewed_by = ?, reviewed_at = datetime('now')
+      WHERE id = ?
+    `).run(status, reviewedBy, requestId);
+    return result.changes > 0;
+  }
+
+  /**
+   * Get a single server request by ID.
+   */
+  getServerRequest(requestId: string): ServerRequest | null {
+    return this.db.prepare('SELECT * FROM server_requests WHERE id = ?').get(requestId) as ServerRequest | null;
+  }
+
+  /**
+   * Update entity-server config (channels, tools).
+   */
+  updateEntityServerConfig(entityId: string, serverId: string, channels?: string[], tools?: string[]): boolean {
+    const existing = this.db.prepare(
+      'SELECT * FROM entity_servers WHERE entity_id = ? AND server_id = ?'
+    ).get(entityId, serverId) as EntityServer | undefined;
+    if (!existing) return false;
+
+    this.db.prepare(`
+      UPDATE entity_servers SET channels = ?, tools = ?
+      WHERE entity_id = ? AND server_id = ?
+    `).run(
+      channels !== undefined ? JSON.stringify(channels) : existing.channels,
+      tools !== undefined ? JSON.stringify(tools) : existing.tools,
+      entityId, serverId
+    );
+    return true;
+  }
+
+  /**
+   * Update entity-server owner config (watch_channels, blocked_channels).
+   */
+  updateEntityServerOwnerConfig(entityId: string, serverId: string, watchChannels?: string[], blockedChannels?: string[]): boolean {
+    const existing = this.db.prepare(
+      'SELECT * FROM entity_servers WHERE entity_id = ? AND server_id = ?'
+    ).get(entityId, serverId) as EntityServer | undefined;
+    if (!existing) return false;
+
+    this.db.prepare(`
+      UPDATE entity_servers SET watch_channels = ?, blocked_channels = ?
+      WHERE entity_id = ? AND server_id = ?
+    `).run(
+      watchChannels !== undefined ? JSON.stringify(watchChannels) : existing.watch_channels,
+      blockedChannels !== undefined ? JSON.stringify(blockedChannels) : existing.blocked_channels,
+      entityId, serverId
+    );
+    return true;
+  }
+
+  // --- Server Settings ---
+
+  /**
+   * Get server-level settings (announcement channel, default template, etc.).
+   */
+  getServerSettings(serverId: string): ServerSettings {
+    const row = this.db.prepare('SELECT * FROM server_settings WHERE server_id = ?').get(serverId) as ServerSettings | undefined;
+    return row || { server_id: serverId, announce_channel: null, default_template: null };
+  }
+
+  /**
+   * Update server-level settings (upsert).
+   */
+  updateServerSettings(serverId: string, settings: { announce_channel?: string | null; default_template?: string | null }): ServerSettings {
+    const existing = this.getServerSettings(serverId);
+    this.db.prepare(`
+      INSERT INTO server_settings (server_id, announce_channel, default_template)
+      VALUES (?, ?, ?)
+      ON CONFLICT(server_id) DO UPDATE SET
+        announce_channel = excluded.announce_channel,
+        default_template = excluded.default_template
+    `).run(
+      serverId,
+      settings.announce_channel !== undefined ? settings.announce_channel : existing.announce_channel,
+      settings.default_template !== undefined ? settings.default_template : existing.default_template,
+    );
+    return this.getServerSettings(serverId);
+  }
+
+  // --- Server Templates ---
+
+  getServerTemplates(serverId: string): ServerTemplate[] {
+    return this.db.prepare(
+      'SELECT * FROM server_templates WHERE server_id = ? ORDER BY created_at DESC'
+    ).all(serverId) as ServerTemplate[];
+  }
+
+  getServerTemplate(templateId: string): ServerTemplate | null {
+    return this.db.prepare('SELECT * FROM server_templates WHERE id = ?').get(templateId) as ServerTemplate | null;
+  }
+
+  createServerTemplate(serverId: string, name: string, channels: string[], tools: string[]): ServerTemplate {
+    const id = uuidv4();
+    this.db.prepare(`
+      INSERT INTO server_templates (id, server_id, name, channels, tools)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(id, serverId, name, JSON.stringify(channels), JSON.stringify(tools));
+    return this.getServerTemplate(id)!;
+  }
+
+  deleteServerTemplate(templateId: string): boolean {
+    const result = this.db.prepare('DELETE FROM server_templates WHERE id = ?').run(templateId);
+    return result.changes > 0;
+  }
+
+  /**
+   * Hard delete an entity and all its server associations.
+   */
+  deleteEntity(entityId: string): boolean {
+    this.db.prepare('DELETE FROM entity_servers WHERE entity_id = ?').run(entityId);
+    this.db.prepare('DELETE FROM server_requests WHERE entity_id = ?').run(entityId);
+    const result = this.db.prepare('DELETE FROM entities WHERE id = ?').run(entityId);
+    return result.changes > 0;
   }
 
   close() {

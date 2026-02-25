@@ -70,6 +70,42 @@ export class WebhookManager {
   }
 
   /**
+   * Send a file attachment as a specific entity (custom name + avatar).
+   */
+  async sendFileAsEntity(
+    channelId: string,
+    fileName: string,
+    fileData: Buffer,
+    entityName: string,
+    entityAvatarUrl?: string | null,
+    content?: string
+  ): Promise<{ messageId: string }> {
+    const webhook = await this.getWebhook(channelId);
+
+    const msg = await webhook.send({
+      content: content || undefined,
+      username: entityName,
+      avatarURL: entityAvatarUrl || undefined,
+      allowedMentions: { parse: ['users'] },
+      files: [{ attachment: fileData, name: fileName }],
+    });
+
+    return { messageId: msg.id };
+  }
+
+  /**
+   * Edit a webhook message.
+   */
+  async editAsEntity(
+    channelId: string,
+    messageId: string,
+    newContent: string
+  ): Promise<void> {
+    const webhook = await this.getWebhook(channelId);
+    await webhook.editMessage(messageId, { content: newContent });
+  }
+
+  /**
    * Invalidate cached webhook for a channel.
    */
   invalidateChannel(channelId: string): void {

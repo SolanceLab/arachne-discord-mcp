@@ -8,19 +8,25 @@ import type { WebhookManager } from './webhook-manager.js';
 export interface Entity {
   id: string;
   name: string;
+  description: string | null;
   avatar_url: string | null;
+  accent_color: string | null; // Hex color for profile banner
   api_key_hash: string;
   key_salt: string;
   created_at: string;
   active: number;
+  owner_id: string | null; // Discord user ID of entity owner
 }
 
 export interface EntityServer {
   entity_id: string;
   server_id: string;
-  channels: string; // JSON array of channel IDs (empty array = all)
-  tools: string;    // JSON array of allowed tool names (empty array = all)
-  role_id: string | null; // Discord role ID for @mentions
+  channels: string;          // JSON array: admin whitelist of channel IDs (empty = all)
+  tools: string;             // JSON array: admin whitelist of MCP tools (empty = all)
+  watch_channels: string;    // JSON array: entity owner's active-monitoring channels
+  blocked_channels: string;  // JSON array: entity owner's no-respond channels
+  role_id: string | null;    // Discord role ID for @mentions
+  announce_channel: string | null; // Channel for join announcements
 }
 
 export interface EntityWithServers extends Entity {
@@ -76,4 +82,42 @@ export interface EntityContext {
   bus: MessageBus;
   webhookManager: WebhookManager;
   discordClient: Client;
+}
+
+// --- Dashboard / Loom ---
+
+export interface ServerRequest {
+  id: string;
+  entity_id: string;
+  server_id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requested_by: string;
+  reviewed_by: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+}
+
+export interface ServerSettings {
+  server_id: string;
+  announce_channel: string | null;
+  default_template: string | null; // template ID or null
+}
+
+export interface ServerTemplate {
+  id: string;
+  server_id: string;
+  name: string;
+  channels: string;  // JSON array of channel IDs (empty = all)
+  tools: string;     // JSON array of tool names (empty = all)
+  created_at: string;
+}
+
+export interface JWTPayload {
+  sub: string;           // Discord user ID
+  username: string;
+  avatar: string | null;
+  is_operator: boolean;
+  admin_guilds: string[]; // Guild IDs where user is admin + bot is present
+  iat: number;
+  exp: number;
 }

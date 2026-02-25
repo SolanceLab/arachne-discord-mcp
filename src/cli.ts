@@ -1,9 +1,8 @@
 import 'dotenv/config';
 import { EntityRegistry } from './entity-registry.js';
+import { createEntityRole, deleteEntityRole, sendAnnouncement } from './api/discord-api.js';
 
 const DB_PATH = process.env.DB_PATH || './arachne.db';
-const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
-const DISCORD_API = 'https://discord.com/api/v10';
 
 const registry = new EntityRegistry(DB_PATH);
 const args = process.argv.slice(2);
@@ -14,43 +13,6 @@ function getFlag(name: string): string | undefined {
   const idx = args.indexOf(`--${name}`);
   if (idx === -1 || idx + 1 >= args.length) return undefined;
   return args[idx + 1];
-}
-
-async function discordRequest(path: string, method: string, body?: unknown): Promise<any> {
-  if (!DISCORD_BOT_TOKEN) throw new Error('DISCORD_BOT_TOKEN not set — cannot call Discord API');
-  const res = await fetch(`${DISCORD_API}${path}`, {
-    method,
-    headers: {
-      'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Discord API ${method} ${path} failed (${res.status}): ${text}`);
-  }
-  if (res.status === 204) return null;
-  return res.json();
-}
-
-async function createEntityRole(serverId: string, entityName: string): Promise<string> {
-  const role = await discordRequest(`/guilds/${serverId}/roles`, 'POST', {
-    name: entityName,
-    mentionable: true,
-    permissions: '0', // No permissions — role is just for @mentions
-  });
-  return role.id;
-}
-
-async function deleteEntityRole(serverId: string, roleId: string): Promise<void> {
-  await discordRequest(`/guilds/${serverId}/roles/${roleId}`, 'DELETE');
-}
-
-async function sendAnnouncement(channelId: string, entityName: string, roleId: string): Promise<void> {
-  await discordRequest(`/channels/${channelId}/messages`, 'POST', {
-    content: `**${entityName}** has joined this server. You can mention them with <@&${roleId}>.`,
-  });
 }
 
 async function main() {

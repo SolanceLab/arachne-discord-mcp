@@ -1,10 +1,15 @@
 import express from 'express';
-import type { Request, Response } from 'express';
+import path from 'path';
+import type { Request, Response, NextFunction } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { verifyApiKey } from './crypto.js';
 import { registerTools } from './mcp-tools.js';
 import { logger } from './logger.js';
+import { createAuthRouter } from './api/auth.js';
+import { createEntitiesRouter } from './api/entities.js';
+import { createServersRouter } from './api/servers.js';
+import { createOperatorRouter } from './api/operator.js';
 import type { EntityRegistry } from './entity-registry.js';
 import type { MessageBus } from './message-bus.js';
 import type { WebhookManager } from './webhook-manager.js';
@@ -13,7 +18,7 @@ import type { EntityContext } from './types.js';
 
 const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, DELETE',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, Mcp-Session-Id, Mcp-Protocol-Version',
   'Access-Control-Expose-Headers': 'Mcp-Session-Id',
 };
@@ -36,9 +41,25 @@ export function createMcpHttpServer(deps: McpServerDeps): express.Express {
   const app = express();
   app.use(express.json());
 
+  // CORS for all routes
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    applyCors(res);
+    if (_req.method === 'OPTIONS') {
+      res.status(204).end();
+      return;
+    }
+    next();
+  });
+
+  // Serve uploaded avatars
+  const dataDir = process.env.DATA_DIR || '/data';
+  app.use('/avatars', express.static(path.join(dataDir, 'avatars'), {
+    maxAge: '1h',
+    immutable: false,
+  }));
+
   // Health check (unauthenticated)
   app.get('/health', (_req: Request, res: Response) => {
-    applyCors(res);
     res.json({
       status: 'ok',
       uptime: process.uptime(),
@@ -46,21 +67,19 @@ export function createMcpHttpServer(deps: McpServerDeps): express.Express {
     });
   });
 
-  // CORS preflight for MCP endpoints
-  app.options('/mcp/:entity_id', (_req: Request, res: Response) => {
-    applyCors(res);
-    res.status(204).end();
-  });
+  // Dashboard API routes
+  app.use('/api/auth', createAuthRouter(registry, discordClient));
+  app.use('/api/entities', createEntitiesRouter(registry, discordClient));
+  app.use('/api/servers', createServersRouter(registry, discordClient));
+  app.use('/api/operator', createOperatorRouter(registry, discordClient));
 
   // DELETE for MCP session close
   app.delete('/mcp/:entity_id', (_req: Request, res: Response) => {
-    applyCors(res);
     res.status(200).json({ message: 'Session closed' });
   });
 
   // GET for MCP (not supported in stateless mode)
   app.get('/mcp/:entity_id', (_req: Request, res: Response) => {
-    applyCors(res);
     res.status(405).json({
       jsonrpc: '2.0',
       error: { code: -32000, message: 'Method not allowed. Use POST for MCP requests.' },
@@ -70,8 +89,6 @@ export function createMcpHttpServer(deps: McpServerDeps): express.Express {
 
   // Main MCP endpoint — per-entity routing
   app.post('/mcp/:entity_id', async (req: Request, res: Response) => {
-    applyCors(res);
-
     const entityId = req.params.entity_id;
 
     // Extract Bearer token
