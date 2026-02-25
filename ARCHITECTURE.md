@@ -463,12 +463,19 @@ DATA_DIR=/data            # Persistent volume for SQLite + avatars
 - Deploy to Fly.io
 - **Goal:** A working entity can read, post, be @mentioned, and leave servers on HoS via any MCP client
 
-### Phase 2 — Extended Tools (~2-3 days)
-- `send_dm`, `get_channel_history`, `search_messages`
-- Thread/forum support: `create_thread`, `create_forum_post`
-- Rich embeds support
-- Name/mention triggers (auto-route messages containing entity name)
-- **Goal:** Full Discord engagement capability per entity
+### Phase 2 — Extended Tools ✅ COMPLETE (24 Feb 2026)
+- **24 new tools added** (total 31 MCP tools):
+  - **Messaging:** `send_dm`, `send_file`
+  - **Channel Management:** `create_channel`, `set_channel_topic`, `rename_channel`, `delete_channel`, `create_category`, `move_channel`
+  - **Reactions:** `get_reactions`
+  - **Polls:** `create_poll`
+  - **Message Management:** `edit_message`, `delete_message`, `pin_message`
+  - **Threads & Forums:** `create_thread`, `create_forum_post`, `list_forum_threads`
+  - **Attachments:** `fetch_attachment`
+  - **Moderation:** `timeout_user`, `assign_role`, `remove_role`
+  - **Awareness:** `search_messages`, `list_members`, `get_user_info`, `list_roles`
+- Dashboard (The Loom) now has grouped ToolPicker component matching these categories
+- **Goal:** Full Discord engagement capability per entity — ACHIEVED
 
 ### Phase 3 — The Loom Dashboard ✅ Complete (shipped same day as Phase 1)
 - Web UI with Discord OAuth login (arachne-loom.pages.dev on Cloudflare Pages)
