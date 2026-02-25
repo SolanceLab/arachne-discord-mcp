@@ -6,10 +6,20 @@ Multi-tenant Discord MCP bot — one bot, unlimited AI identities via webhooks. 
 ```
 arachne-discord-mcp/
 ├── ARCHITECTURE.md          # Full architecture spec
-├── arcadia-vox-recon.md     # Competitive intel (Vox/Codependent AI)
-├── DEVLOG.md                # Development log
-├── CLAUDE.md                # This file
-└── src/                     # Source code (Phase 1)
+├── src/                     # Backend (TypeScript, Express, discord.js)
+│   ├── bot.ts               # Discord gateway listener + router
+│   ├── mcp-server.ts        # Per-entity MCP endpoint handler + Express app
+│   ├── webhook-manager.ts   # Webhook creation + identity masking
+│   ├── entity-registry.ts   # SQLite CRUD for entities + OAuth
+│   ├── message-bus.ts       # In-memory encrypted message queues
+│   ├── crypto.ts            # Key derivation, encryption, hashing
+│   └── api/                 # REST API routes (auth, entities, servers, OAuth)
+├── dashboard/               # The Loom (React + Vite frontend)
+│   └── src/
+│       ├── pages/           # Dashboard pages
+│       └── lib/             # API client, utilities
+├── fly.toml                 # Fly.io deployment config
+└── Dockerfile               # Container build
 ```
 
 ## Stack
@@ -17,22 +27,20 @@ arachne-discord-mcp/
 - **Discord:** discord.js v14
 - **Database:** SQLite (better-sqlite3)
 - **MCP Server:** SSE + Streamable HTTP
-- **Encryption:** AES-256-GCM per entity, bcrypt for key hashing
-- **Deployment:** Fly.io free tier (Singapore region)
-
-## Key Files (once built)
-- `src/bot.ts` — Discord gateway listener + router
-- `src/mcp-server.ts` — Per-entity MCP endpoint handler
-- `src/webhook-manager.ts` — Webhook creation + identity masking
-- `src/entity-registry.ts` — SQLite CRUD for entities
-- `src/message-bus.ts` — In-memory encrypted message queues
-- `src/crypto.ts` — Key derivation, encryption, hashing
+- **Auth:** Dual — API key (bcrypt) for local clients, OAuth 2.1 (JWT) for cloud platforms
+- **Encryption:** AES-256-GCM per entity, HKDF key derivation
+- **Frontend:** React 19 + Vite + TailwindCSS
+- **Deployment:** Fly.io (backend), Cloudflare Pages (dashboard)
 
 ## Commands
-- `npm run dev` — Local development
+- `npm run dev` — Local development (backend)
 - `npm run build` — Build for production
-- `fly deploy` — Deploy to Fly.io
+- `fly deploy` — Deploy backend to Fly.io
+- `cd dashboard && npm run dev` — Local dashboard development
+- `cd dashboard && npm run deploy` — Deploy dashboard to Cloudflare Pages
 
-## Git
-- Repo: SolanceLab/arachne-discord-mcp (private)
-- **No Co-Authored-By lines** — SolanceLab repos are Anne & Chadrien's joint account
+## Key Patterns
+- All message content is encrypted in-memory, never written to disk or database
+- Entity permissions are scoped per server (channel whitelist + tool whitelist)
+- MCP endpoint accepts both API key and OAuth JWT tokens
+- Webhooks are shared per channel with username/avatar overrides per entity

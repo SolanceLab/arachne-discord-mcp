@@ -6,7 +6,7 @@ import { requireAuth, signJWT } from './middleware.js';
 import type { EntityRegistry } from '../entity-registry.js';
 import { logger } from '../logger.js';
 
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1475773681329246259';
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 const DASHBOARD_URL = process.env.DASHBOARD_URL || 'http://localhost:5173';
 const OPERATOR_IDS = (process.env.OPERATOR_DISCORD_IDS || '').split(',').filter(Boolean);

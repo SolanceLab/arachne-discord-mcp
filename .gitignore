@@ -8,3 +8,6 @@ dist/
 *.sqlite
 DEVLOG.md
 arcadia-vox-recon.md
+*.tsbuildinfo
+.DS_Store
+multi-tenant-discord-mcp-spec.md

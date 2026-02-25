@@ -12,7 +12,7 @@ import type { OAuthJWTPayload } from '../types.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 const BASE_URL = process.env.BASE_URL || 'https://arachne-discord.fly.dev';
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1475773681329246259';
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID || '';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET || '';
 
 export function createOAuthRouter(registry: EntityRegistry, _discordClient: Client): Router {
