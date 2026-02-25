@@ -4,7 +4,8 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { verifyApiKey } from './crypto.js';
+import { verifyApiKey, deriveEncryptionKey } from './crypto.js';
+import { keyStore } from './key-store.js';
 import { registerTools } from './mcp-tools.js';
 import { logger } from './logger.js';
 import { createAuthRouter } from './api/auth.js';
@@ -97,7 +98,7 @@ export function createMcpHttpServer(deps: McpServerDeps): express.Express {
 
   // Main MCP endpoint — per-entity routing (dual auth: API key or OAuth token)
   app.post('/mcp/:entity_id', async (req: Request, res: Response) => {
-    const entityId = req.params.entity_id;
+    const entityId = req.params.entity_id as string;
 
     // Extract Bearer token
     const authHeader = req.headers.authorization;
@@ -129,6 +130,13 @@ export function createMcpHttpServer(deps: McpServerDeps): express.Express {
       const valid = await verifyApiKey(token, entity.api_key_hash);
       if (valid) {
         authorized = true;
+
+        // Derive encryption key from raw API key + stored salt, cache in volatile KeyStore
+        const encKey = deriveEncryptionKey(token, entity.key_salt);
+        keyStore.set(entityId, encKey);
+
+        // Retroactively encrypt any messages queued during cold-start window
+        bus.encryptPending(entityId, encKey);
       }
     }
 
@@ -141,7 +149,7 @@ export function createMcpHttpServer(deps: McpServerDeps): express.Express {
     // Get entity's server configurations
     const entityServers = registry.getEntityServers(entityId as string);
 
-    // Build entity context for tools
+    // Build entity context for tools (include encryption key if available)
     const ctx: EntityContext = {
       entity,
       entityServers,
@@ -149,6 +157,7 @@ export function createMcpHttpServer(deps: McpServerDeps): express.Express {
       bus,
       webhookManager,
       discordClient,
+      encryptionKey: keyStore.get(entityId),
     };
 
     // Create stateless McpServer + transport per request

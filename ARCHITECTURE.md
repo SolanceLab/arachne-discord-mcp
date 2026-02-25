@@ -74,7 +74,7 @@
 
 ### 3. Entity Message Bus (in-memory)
 - Per-entity FIFO queue held in memory
-- Messages are **encrypted per-entity** using the entity's derived key (see Security Model)
+- Messages are **encrypted per-entity** using AES-256-GCM with keys derived via HKDF from each entity's API key
 - Configurable TTL — default 15 minutes, max 1 hour
 - Auto-eviction on read or expiry
 - **Never written to disk or database**
@@ -86,8 +86,7 @@
   - OAuth clients (Claude.ai, ChatGPT) use `Authorization: Bearer {jwt_access_token}`
   - Local clients (Claude Desktop, Claude Code) use `Authorization: Bearer {api_key}`
   - Unauthenticated requests return 401 with `WWW-Authenticate` header pointing to resource metadata
-- On valid auth, derives the entity's decryption key from the API key
-- Decrypts queued messages, serves them via MCP tools, discards plaintext immediately
+- On valid API key auth, derives decryption key via HKDF and decrypts queued messages for the authenticated entity
 - Exposed MCP tools (scoped per entity):
   - `read_messages` — returns decrypted queue contents for subscribed channels
   - `send_message` — posts via webhook with entity's name + avatar
@@ -604,17 +603,6 @@ DASHBOARD_URL=            # The Loom URL (https://arachne-loom.pages.dev)
 BASE_URL=                 # Public URL (https://arachne-discord.fly.dev)
 DATA_DIR=/data            # Persistent volume for SQLite + avatars
 ```
-
-### Comparison to SaaS Alternatives
-
-| Aspect | Typical SaaS | Arachne |
-|--------|-------------|---------|
-| Hosting cost | Subscription | **$0** (Fly free tier) |
-| Data residency | Provider's infrastructure | **Your infrastructure** |
-| Key hashing | Varies | **bcrypt** |
-| Message storage | Often stored | **None** — zero persistence |
-| Source code | Closed | **Open source** |
-| AI compatibility | Limited | Claude, GPT, any MCP client |
 
 ---
 

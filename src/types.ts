@@ -46,7 +46,8 @@ export interface QueuedMessage {
   content: string;
   timestamp: Date;
   expiresAt: Date;
-  addressed: boolean; // true when this entity was @mentioned by role
+  addressed: boolean;  // true when this entity was @mentioned by role
+  encrypted: boolean;  // true when content is AES-256-GCM encrypted blob (base64)
 }
 
 export interface ReadableMessage {
@@ -84,6 +85,7 @@ export interface EntityContext {
   bus: MessageBus;
   webhookManager: WebhookManager;
   discordClient: Client;
+  encryptionKey?: Buffer; // Per-entity AES-256 key (volatile, from KeyStore)
 }
 
 // --- Dashboard / Loom ---

@@ -1,4 +1,5 @@
 import { logger } from './logger.js';
+import { keyStore } from './key-store.js';
 import type { EntityRegistry } from './entity-registry.js';
 import type { Gateway } from './gateway.js';
 import type { MessageBus } from './message-bus.js';
@@ -45,8 +46,9 @@ export class Router {
       if (entityId) addressedEntityIds.add(entityId);
     }
 
-    // Push to each entity's queue
+    // Push to each entity's queue (encrypted if key is available)
     for (const entity of entities) {
+      const encKey = keyStore.get(entity.id);
       this.bus.push(entity.id, {
         messageId: msg.messageId,
         channelId: msg.channelId,
@@ -56,7 +58,7 @@ export class Router {
         content: msg.content,
         timestamp: msg.timestamp,
         addressed: addressedEntityIds.has(entity.id),
-      });
+      }, encKey);
     }
 
     logger.debug(

@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3';
 import crypto from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
-import { generateApiKey, generateSalt, hashApiKey } from './crypto.js';
+import { generateApiKey, generateSalt, hashApiKey, deriveEncryptionKey } from './crypto.js';
+import { keyStore } from './key-store.js';
 import { logger } from './logger.js';
 import type { Entity, EntityServer, ServerRequest, ServerSettings, ServerTemplate, OAuthAuthCode, OAuthAccessToken, OAuthRefreshToken, OAuthClient } from './types.js';
 
@@ -195,6 +196,10 @@ export class EntityRegistry {
       VALUES (?, ?, ?, ?, ?)
     `).run(id, name, avatarUrl ?? null, hash, salt);
 
+    // Cache encryption key in volatile store (available immediately for message encryption)
+    const encKey = deriveEncryptionKey(apiKey, salt);
+    keyStore.set(id, encKey);
+
     const entity = this.getEntity(id)!;
     logger.info(`Entity created: ${name} (${id})`);
     return { entity, apiKey };
@@ -220,6 +225,7 @@ export class EntityRegistry {
   deactivateEntity(id: string): boolean {
     const result = this.db.prepare('UPDATE entities SET active = 0 WHERE id = ?').run(id);
     if (result.changes > 0) {
+      keyStore.delete(id);
       logger.info(`Entity deactivated: ${id}`);
       return true;
     }
@@ -240,6 +246,10 @@ export class EntityRegistry {
     this.db.prepare(`
       UPDATE entities SET api_key_hash = ?, key_salt = ? WHERE id = ?
     `).run(hash, salt, id);
+
+    // Update encryption key in volatile store
+    const encKey = deriveEncryptionKey(apiKey, salt);
+    keyStore.set(id, encKey);
 
     logger.info(`API key regenerated for entity: ${id}`);
     return apiKey;
@@ -551,6 +561,7 @@ export class EntityRegistry {
   deleteEntity(entityId: string): boolean {
     this.db.prepare('DELETE FROM entity_servers WHERE entity_id = ?').run(entityId);
     this.db.prepare('DELETE FROM server_requests WHERE entity_id = ?').run(entityId);
+    keyStore.delete(entityId);
     const result = this.db.prepare('DELETE FROM entities WHERE id = ?').run(entityId);
     return result.changes > 0;
   }

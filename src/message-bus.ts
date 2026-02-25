@@ -1,4 +1,5 @@
 import { logger } from './logger.js';
+import { encryptContent, decryptContent } from './crypto.js';
 import type { QueuedMessage, ReadableMessage } from './types.js';
 
 const DEFAULT_TTL_MS = 15 * 60 * 1000; // 15 minutes
@@ -29,16 +30,27 @@ export class MessageBus {
 
   /**
    * Push a message into an entity's queue.
+   * If encryptionKey is provided, content is encrypted with AES-256-GCM before storage.
    */
-  push(entityId: string, message: Omit<QueuedMessage, 'expiresAt'>): void {
+  push(entityId: string, message: Omit<QueuedMessage, 'expiresAt' | 'encrypted'>, encryptionKey?: Buffer): void {
     let queue = this.queues.get(entityId);
     if (!queue) {
       queue = [];
       this.queues.set(entityId, queue);
     }
 
+    let content = message.content;
+    let encrypted = false;
+
+    if (encryptionKey) {
+      content = encryptContent(encryptionKey, message.content);
+      encrypted = true;
+    }
+
     queue.push({
       ...message,
+      content,
+      encrypted,
       expiresAt: new Date(Date.now() + this.ttlMs),
     });
 
@@ -52,8 +64,9 @@ export class MessageBus {
 
   /**
    * Read messages from an entity's queue (does NOT remove them — TTL handles expiry).
+   * If decryptionKey is provided, encrypted messages are decrypted before returning.
    */
-  read(entityId: string, channelId?: string, limit = 50): ReadableMessage[] {
+  read(entityId: string, channelId?: string, limit = 50, decryptionKey?: Buffer): ReadableMessage[] {
     const queue = this.queues.get(entityId);
     if (!queue) return [];
 
@@ -67,16 +80,52 @@ export class MessageBus {
     // Most recent first, apply limit
     const sliced = messages.slice(-limit);
 
-    return sliced.map(m => ({
-      id: m.messageId,
-      channel_id: m.channelId,
-      server_id: m.serverId,
-      author_id: m.authorId,
-      author_name: m.authorName,
-      content: m.content,
-      timestamp: m.timestamp.toISOString(),
-      addressed: m.addressed,
-    }));
+    return sliced.map(m => {
+      let content = m.content;
+      if (m.encrypted && decryptionKey) {
+        try {
+          content = decryptContent(decryptionKey, m.content);
+        } catch {
+          content = '[encrypted — key mismatch]';
+        }
+      } else if (m.encrypted) {
+        content = '[encrypted]';
+      }
+
+      return {
+        id: m.messageId,
+        channel_id: m.channelId,
+        server_id: m.serverId,
+        author_id: m.authorId,
+        author_name: m.authorName,
+        content,
+        timestamp: m.timestamp.toISOString(),
+        addressed: m.addressed,
+      };
+    });
+  }
+
+  /**
+   * Encrypt any pending unencrypted messages in an entity's queue.
+   * Called when an API key client reconnects after a cold start, re-establishing the encryption key.
+   */
+  encryptPending(entityId: string, key: Buffer): number {
+    const queue = this.queues.get(entityId);
+    if (!queue) return 0;
+
+    let count = 0;
+    for (const msg of queue) {
+      if (!msg.encrypted) {
+        msg.content = encryptContent(key, msg.content);
+        msg.encrypted = true;
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      logger.info(`Retroactively encrypted ${count} pending messages for entity ${entityId}`);
+    }
+    return count;
   }
 
   /**

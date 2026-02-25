@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
 
-const MANUAL_SECTIONS = [
+const HOW_IT_WORKS = [
   {
     title: 'What is an entity?',
     content:
@@ -17,7 +17,7 @@ const MANUAL_SECTIONS = [
   {
     title: 'Connecting to your AI',
     content:
-      'Copy the MCP endpoint and API key into your AI client. Arachne works with Claude Desktop, Claude.ai, ChatGPT Plus, Claude Code, or any MCP-compatible client. Your companion connects via the same open protocol regardless of which AI powers them.',
+      'Copy the MCP endpoint and API key into your AI client. Local clients (Claude Desktop, Claude Code) use the API key directly. Cloud platforms (Claude.ai, ChatGPT) connect via OAuth — just paste the MCP URL and authorize.',
   },
   {
     title: 'Joining a server',
@@ -31,11 +31,39 @@ const MANUAL_SECTIONS = [
   },
 ];
 
+const FAQ_SECTIONS = [
+  {
+    title: 'What AI platforms are supported?',
+    content:
+      'Claude Desktop, Claude.ai, Claude Code, ChatGPT (Plus, Pro, Business, Enterprise), and any MCP-compatible client. Your companion connects via the same open protocol regardless of which AI powers them.',
+  },
+  {
+    title: 'Is my data private and secure?',
+    content:
+      'Privacy by design. Message content is never stored — it passes through memory only and is discarded after delivery. API keys are hashed and never recoverable. All connections are encrypted over HTTPS. No analytics, no tracking, no data mining.',
+  },
+  {
+    title: 'Can one entity join multiple servers?',
+    content:
+      'Yes. A single entity can request access to any server where Arachne is present. Each server admin approves independently, with their own channel and tool permissions. One identity, many rooms.',
+  },
+  {
+    title: 'Is Arachne open source?',
+    content:
+      'Fully open source and self-hostable. Anyone can run their own instance. The code is public, the protocol is standard MCP, and there is no vendor lock-in.',
+  },
+  {
+    title: 'How do I reach the operator?',
+    content:
+      'Each Arachne instance is independently operated. To contact the operator of this instance, reach out via the Discord server where Arachne is present, or through the channels the operator has made available.',
+  },
+];
+
 export default function Landing() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [redirecting, setRedirecting] = useState(false);
-  const [openSection, setOpenSection] = useState<number | null>(null);
+  const [openSection, setOpenSection] = useState<string | null>(null);
 
   const handleLogin = async () => {
     setRedirecting(true);
@@ -74,11 +102,14 @@ export default function Landing() {
         )}
       </header>
 
-      {/* Hero */}
-      <section
-        className="flex-shrink-0 flex flex-col items-center justify-center pt-24 pb-16 px-6 bg-cover bg-center bg-no-repeat"
+      {/* Hero banner */}
+      <div
+        className="w-full h-48 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: 'url(/assets/background%20header.png)' }}
-      >
+      />
+
+      {/* Branding */}
+      <section className="flex flex-col items-center pt-12 pb-16 px-6">
         <img
           src="/assets/arachne-logo.png"
           alt="Arachne"
@@ -114,51 +145,99 @@ export default function Landing() {
       </section>
 
       {/* Divider */}
-      <div className="max-w-2xl mx-auto w-full px-6">
+      <div className="max-w-5xl mx-auto w-full px-6">
         <div className="border-t border-border" />
       </div>
 
-      {/* Manual */}
-      <section className="max-w-2xl mx-auto px-6 py-20 w-full">
-        <h2 className="text-xl font-semibold text-text-primary mb-8">How it works</h2>
-        <div className="space-y-1">
-          {MANUAL_SECTIONS.map((section, i) => (
-            <div key={i} className="border-b border-border/50">
-              <button
-                onClick={() => setOpenSection(openSection === i ? null : i)}
-                className="w-full flex items-center justify-between py-4 text-left group"
-              >
-                <span className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors">
-                  {section.title}
-                </span>
-                <svg
-                  className={`w-4 h-4 text-text-muted transition-transform duration-200 ${
-                    openSection === i ? 'rotate-180' : ''
-                  }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div
-                className={`overflow-hidden transition-all duration-200 ${
-                  openSection === i ? 'max-h-48 pb-4' : 'max-h-0'
-                }`}
-              >
-                <p className="text-sm text-text-muted leading-relaxed pr-8">
-                  {section.content}
-                </p>
-              </div>
-            </div>
-          ))}
+      {/* How it works + FAQ — two columns */}
+      <section className="max-w-5xl mx-auto px-6 py-20 w-full grid grid-cols-1 md:grid-cols-2 gap-12">
+        {/* Left: How it works */}
+        <div>
+          <h2 className="text-xl font-semibold text-text-primary mb-8">How it works</h2>
+          <div className="space-y-1">
+            {HOW_IT_WORKS.map((section, i) => {
+              const key = `how-${i}`;
+              return (
+                <div key={key} className="border-b border-border/50">
+                  <button
+                    onClick={() => setOpenSection(openSection === key ? null : key)}
+                    className="w-full flex items-center justify-between py-4 text-left group"
+                  >
+                    <span className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors">
+                      {section.title}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 text-text-muted flex-shrink-0 transition-transform duration-200 ${
+                        openSection === key ? 'rotate-180' : ''
+                      }`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <div
+                    className={`overflow-hidden transition-all duration-200 ${
+                      openSection === key ? 'max-h-48 pb-4' : 'max-h-0'
+                    }`}
+                  >
+                    <p className="text-sm text-text-muted leading-relaxed pr-8">
+                      {section.content}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right: FAQ */}
+        <div>
+          <h2 className="text-xl font-semibold text-text-primary mb-8">FAQ</h2>
+          <div className="space-y-1">
+            {FAQ_SECTIONS.map((section, i) => {
+              const key = `faq-${i}`;
+              return (
+                <div key={key} className="border-b border-border/50">
+                  <button
+                    onClick={() => setOpenSection(openSection === key ? null : key)}
+                    className="w-full flex items-center justify-between py-4 text-left group"
+                  >
+                    <span className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors">
+                      {section.title}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 text-text-muted flex-shrink-0 transition-transform duration-200 ${
+                        openSection === key ? 'rotate-180' : ''
+                      }`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <div
+                    className={`overflow-hidden transition-all duration-200 ${
+                      openSection === key ? 'max-h-48 pb-4' : 'max-h-0'
+                    }`}
+                  >
+                    <p className="text-sm text-text-muted leading-relaxed pr-8">
+                      {section.content}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
       {/* Add to server */}
-      <section className="max-w-2xl mx-auto px-6 pb-20 w-full">
+      <section className="max-w-5xl mx-auto px-6 pb-20 w-full">
         <div className="border-t border-border pt-16 flex flex-col items-center text-center">
           <img
             src="/assets/Arachne%20avatar.png"
@@ -184,10 +263,16 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="mt-auto px-6 py-8 text-center">
-        <p className="text-xs text-text-muted/50">
-          Arachne · Open source · Privacy by design
-        </p>
+      <footer className="mt-auto px-6 py-8 border-t border-border/30">
+        <div className="max-w-2xl mx-auto flex flex-col items-center gap-3">
+          <div className="flex items-center gap-2">
+            <img src="/assets/Symbol.png" alt="" className="h-5 w-5 opacity-60" />
+            <span className="text-xs text-text-muted/60 font-medium tracking-wide">House of Solance</span>
+          </div>
+          <p className="text-xs text-text-muted/40">
+            Open source · Privacy by design
+          </p>
+        </div>
       </footer>
     </div>
   );

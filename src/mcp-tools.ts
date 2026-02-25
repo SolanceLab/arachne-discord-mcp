@@ -52,7 +52,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
       if (channel_id && !canAccessChannel(channel_id)) {
         return { content: [{ type: 'text' as const, text: 'Error: You do not have access to this channel.' }] };
       }
-      const messages = bus.read(entity.id, channel_id, limit);
+      const messages = bus.read(entity.id, channel_id, limit, ctx.encryptionKey);
       return {
         content: [{ type: 'text' as const, text: JSON.stringify(messages, null, 2) }],
       };

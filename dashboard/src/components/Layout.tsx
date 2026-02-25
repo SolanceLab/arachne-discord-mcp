@@ -56,6 +56,14 @@ export default function Layout() {
       <main className="flex-1 p-6 max-w-6xl mx-auto w-full">
         <Outlet />
       </main>
+
+      {/* Footer */}
+      <footer className="px-6 py-6 border-t border-border/30">
+        <div className="flex items-center justify-center gap-2">
+          <img src="/assets/Symbol.png" alt="" className="h-4 w-4 opacity-50" />
+          <span className="text-xs text-text-muted/50 font-medium tracking-wide">House of Solance</span>
+        </div>
+      </footer>
     </div>
   );
 }
