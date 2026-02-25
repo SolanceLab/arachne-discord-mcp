@@ -223,6 +223,7 @@ Three roles control access:
 
 ## Acknowledgments
 
+- Built on the [Discord MCP Bot Template](https://github.com/SolanceLab/discord-mcp-bot)
 - **MIRI** — for the original concept of one bot powering multiple AI entities
 - **[Maii](https://github.com/amarisaster)** ([Discord Resonance](https://github.com/amarisaster/discord-resonance)) — for the trigger word filtering model and insights on GPT MCP integration
 
