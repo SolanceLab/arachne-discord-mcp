@@ -228,6 +228,8 @@ Three roles control access:
 
 ## Support
 
+If you find this useful, consider supporting our work:
+
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20Us-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/houseofsolance)
 
 ## License
