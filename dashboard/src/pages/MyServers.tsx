@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
 import ChannelPicker, { type DiscordChannel } from '../components/ChannelPicker';
+import ToolPicker from '../components/ToolPicker';
 
 interface ServerEntity {
   id: string;
@@ -25,17 +26,6 @@ interface ServerRequest {
   entity_name: string;
   entity_avatar: string | null;
 }
-
-const AVAILABLE_TOOLS = [
-  'read_messages',
-  'send_message',
-  'send_dm',
-  'add_reaction',
-  'list_channels',
-  'get_entity_info',
-  'get_channel_history',
-  'leave_server',
-];
 
 interface ServerTemplateData {
   id: string;
@@ -203,13 +193,6 @@ export default function MyServers() {
     setEntities(e);
   };
 
-  const toggleTool = (tool: string, current: string[], setter: (v: string[]) => void) => {
-    if (current.includes(tool)) {
-      setter(current.filter(t => t !== tool));
-    } else {
-      setter([...current, tool]);
-    }
-  };
 
   if (servers.length === 0) {
     return (
@@ -330,33 +313,7 @@ export default function MyServers() {
                           label="Channel whitelist"
                         />
 
-                        <div>
-                          <label className="text-xs text-text-muted block mb-1.5">Tool whitelist</label>
-                          <label className="flex items-center gap-2 mb-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={templateTools.length === 0}
-                              onChange={() => setTemplateTools(templateTools.length === 0 ? ['read_messages'] : [])}
-                              className="rounded border-border"
-                            />
-                            <span className="text-sm">All tools</span>
-                          </label>
-                          {templateTools.length > 0 && (
-                            <div className="grid grid-cols-2 gap-1 border border-border rounded p-2 bg-bg-card">
-                              {AVAILABLE_TOOLS.map(tool => (
-                                <label key={tool} className="flex items-center gap-2 cursor-pointer py-0.5">
-                                  <input
-                                    type="checkbox"
-                                    checked={templateTools.includes(tool)}
-                                    onChange={() => toggleTool(tool, templateTools, setTemplateTools)}
-                                    className="rounded border-border"
-                                  />
-                                  <span className="text-xs text-text-primary">{tool}</span>
-                                </label>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        <ToolPicker selected={templateTools} onChange={setTemplateTools} />
 
                         <button
                           onClick={saveTemplate}
@@ -483,33 +440,7 @@ export default function MyServers() {
                         />
 
                         {/* Tool whitelist */}
-                        <div>
-                          <label className="text-xs text-text-muted block mb-1.5">Tool whitelist</label>
-                          <label className="flex items-center gap-2 mb-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={approveTools.length === 0}
-                              onChange={() => setApproveTools(approveTools.length === 0 ? ['read_messages'] : [])}
-                              className="rounded border-border"
-                            />
-                            <span className="text-sm">All tools</span>
-                          </label>
-                          {approveTools.length > 0 && (
-                            <div className="grid grid-cols-2 gap-1 border border-border rounded p-2 bg-bg-deep">
-                              {AVAILABLE_TOOLS.map(tool => (
-                                <label key={tool} className="flex items-center gap-2 cursor-pointer py-0.5">
-                                  <input
-                                    type="checkbox"
-                                    checked={approveTools.includes(tool)}
-                                    onChange={() => toggleTool(tool, approveTools, setApproveTools)}
-                                    className="rounded border-border"
-                                  />
-                                  <span className="text-xs text-text-primary">{tool}</span>
-                                </label>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        <ToolPicker selected={approveTools} onChange={setApproveTools} />
 
                         <button
                           onClick={() => handleApprove(req.id)}
@@ -603,33 +534,7 @@ export default function MyServers() {
                         />
 
                         {/* Tool whitelist */}
-                        <div>
-                          <label className="text-xs text-text-muted block mb-1.5">Tool whitelist</label>
-                          <label className="flex items-center gap-2 mb-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={configTools.length === 0}
-                              onChange={() => setConfigTools(configTools.length === 0 ? ['read_messages'] : [])}
-                              className="rounded border-border"
-                            />
-                            <span className="text-sm">All tools</span>
-                          </label>
-                          {configTools.length > 0 && (
-                            <div className="grid grid-cols-2 gap-1 border border-border rounded p-2 bg-bg-deep">
-                              {AVAILABLE_TOOLS.map(tool => (
-                                <label key={tool} className="flex items-center gap-2 cursor-pointer py-0.5">
-                                  <input
-                                    type="checkbox"
-                                    checked={configTools.includes(tool)}
-                                    onChange={() => toggleTool(tool, configTools, setConfigTools)}
-                                    className="rounded border-border"
-                                  />
-                                  <span className="text-xs text-text-primary">{tool}</span>
-                                </label>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        <ToolPicker selected={configTools} onChange={setConfigTools} />
 
                         {/* Owner's watch/blocked info */}
                         {(entity.watch_channels.length > 0 || entity.blocked_channels.length > 0) && (
