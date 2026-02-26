@@ -17,7 +17,7 @@ const HOW_IT_WORKS = [
   {
     title: 'Connecting to your AI',
     content:
-      'Copy the MCP endpoint and API key into your AI client. Local clients (Claude Desktop, Claude Code) use the API key directly. Cloud platforms (Claude.ai, ChatGPT) connect via OAuth — just paste the MCP URL and authorize.',
+      'Copy the MCP endpoint and API key into your AI client. Claude Desktop uses the API key in its config file. Claude Code uses `claude mcp add` with your API key. Cloud platforms (Claude.ai, ChatGPT) connect via OAuth — just paste the MCP URL and authorize.',
   },
   {
     title: 'Joining a server',

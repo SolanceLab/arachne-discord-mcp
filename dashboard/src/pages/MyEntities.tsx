@@ -686,7 +686,7 @@ export default function MyEntities() {
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setConnectingFor(null)}>
             <div className="bg-bg-surface border border-border rounded-xl max-w-lg w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-bg-surface rounded-t-xl">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-bg-surface rounded-t-xl z-10">
                 <div>
                   <h3 className="text-sm font-semibold text-text-primary">Connect your AI</h3>
                   <p className="text-xs text-text-muted mt-0.5">{entity.name}</p>
@@ -700,9 +700,9 @@ export default function MyEntities() {
               </div>
 
               <div className="px-5 py-4 space-y-5">
-                {/* Claude Desktop / Claude Code */}
+                {/* Claude Desktop */}
                 <div>
-                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">Claude Desktop / Claude Code</label>
+                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">Claude Desktop</label>
                   <ol className="text-xs text-text-muted space-y-1.5 list-decimal list-inside mb-3">
                     <li>Open your config file:
                       <ul className="ml-5 mt-1 space-y-0.5 list-disc list-inside text-[11px]">
@@ -714,7 +714,7 @@ export default function MyEntities() {
                     <li>Add this block inside <code className="text-accent">"mcpServers"</code>:</li>
                   </ol>
                   <div className="relative">
-                    <pre className="text-[11px] text-text-primary bg-bg-deep px-3 py-2.5 rounded border border-border overflow-x-auto whitespace-pre">{`"${serverName}": {
+                    <pre className="text-[11px] text-text-primary bg-bg-deep px-3 py-2.5 rounded border border-border whitespace-pre-wrap break-all">{`"${serverName}": {
   "url": "${mcpUrl}",
   "headers": {
     "Authorization": "Bearer YOUR_API_KEY"
@@ -740,11 +740,32 @@ export default function MyEntities() {
                 {/* Divider */}
                 <div className="border-t border-border" />
 
+                {/* Claude Code */}
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">Claude Code</label>
+                  <p className="text-xs text-text-muted mb-2">Run this command in your terminal:</p>
+                  <div className="relative">
+                    <pre className="text-[11px] text-text-primary bg-bg-deep px-3 py-2.5 rounded border border-border whitespace-pre-wrap break-all">{`claude mcp add --transport http ${serverName} ${mcpUrl} --header "Authorization: Bearer YOUR_API_KEY"`}</pre>
+                    <button
+                      onClick={() => copyToClipboard(`claude mcp add --transport http ${serverName} ${mcpUrl} --header "Authorization: Bearer YOUR_API_KEY"`, `claude-code-${entity.id}`)}
+                      className={`absolute top-1.5 right-1.5 px-2 py-0.5 text-[10px] border border-border rounded transition-colors ${copiedField === `claude-code-${entity.id}` ? 'bg-success/20 text-success border-success/30' : 'bg-bg-surface hover:bg-border'}`}
+                    >
+                      {copiedField === `claude-code-${entity.id}` ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-text-muted mt-1.5">
+                    Replace <code className="text-warning">YOUR_API_KEY</code> with your entity's API key. Restart Claude Code after adding.
+                  </p>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-border" />
+
                 {/* MCP Endpoint */}
                 <div>
                   <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">MCP Endpoint</label>
                   <div className="flex items-center gap-1.5">
-                    <code className="text-xs text-accent bg-bg-deep px-2.5 py-1.5 rounded border border-border flex-1 overflow-x-auto whitespace-nowrap">
+                    <code className="text-xs text-accent bg-bg-deep px-2.5 py-1.5 rounded border border-border flex-1 break-all">
                       {mcpUrl}
                     </code>
                     <button
@@ -782,7 +803,7 @@ export default function MyEntities() {
                 <div className="border-t border-border pt-3">
                   <p className="text-[10px] text-text-muted leading-relaxed">
                     Cloud platforms (<span className="text-text-primary">Claude.ai</span>, <span className="text-text-primary">ChatGPT</span>) use OAuth 2.1 — no API key needed.
-                    Local clients (<span className="text-text-primary">Claude Desktop</span>, <span className="text-text-primary">Claude Code</span>) use the API key in the config file.
+                    <span className="text-text-primary">Claude Desktop</span> and <span className="text-text-primary">Claude Code</span> use the API key — different config methods shown above.
                     Lost your API key? Close this modal and click <span className="text-warning">Regen Key</span>.
                   </p>
                 </div>

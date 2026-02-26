@@ -11,7 +11,7 @@ const DOCUMENTATION = [
   { item: 'Terms & Disclaimer — roles, data handling, acceptable use', status: 'done' as const },
   { item: 'Changelog — known issues, dashboard history, bot history', status: 'done' as const },
   { item: 'Installation Guide — step-by-step setup with screenshots for each AI platform', status: 'in progress' as const },
-  { item: 'MCP Tools Reference — documentation for all 32 tools with examples', status: 'in progress' as const },
+  { item: 'MCP Tools Reference — documentation for all 34 tools across 8 categories', status: 'done' as const },
   { item: 'Bot Permissions Reference — what each Discord permission enables and why it\'s needed', status: 'planned' as const },
 ];
 
