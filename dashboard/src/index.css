@@ -16,6 +16,10 @@
   --color-warning: #fbbf24;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--color-bg-deep);
   color: var(--color-text-primary);

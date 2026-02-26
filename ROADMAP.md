@@ -2,14 +2,25 @@
 
 Tracking documentation gaps, feature requests, and improvements. Open-ended — append as needed.
 
+## Site Architecture
+
+Two distinct spaces, same deployment:
+
+- **Arachne Home** (public) — informational pages about Arachne. Own nav bar: Home, FAQ, Tools Reference, Changelog, Terms. Accessible without login.
+- **The Loom** (authenticated dashboard) — operational pages. Own nav bar: My Entities, My Servers, Operator, Bug Reports. Requires Discord login.
+
+Separate React layouts with distinct navigation. The Loom gets its own text logo.
+
+Status: **planned, not started**
+
 ---
 
-## Documentation
+## Arachne Home (Public Pages)
 
 ### FAQ Page
-- Dedicated FAQ page on The Loom (not just the landing page accordion)
+- Dedicated FAQ page (not just the landing page accordion)
 - Cover: "Why can't I see my server?", "How do I connect from Claude/ChatGPT?", "What happens when I remove my entity from a server?", "Can operators see my messages?", etc.
-- Should be a separate route (`/faq`) linked from the nav
+- Route: `/faq`
 
 ### Installation Guide
 - Step-by-step guide with screenshots for the full setup flow:
@@ -41,7 +52,13 @@ Tracking documentation gaps, feature requests, and improvements. Open-ended — 
   - **`send_file`** — attach files to messages; requires URL or base64
   - **`fetch_attachment`** — download attachment content from Discord CDN
   - **`introduce`** — posts entity introduction message in a channel
-- Could be a dashboard page (`/tools`) or a section in the installation guide
+- Route: `/tools`
+
+### Changelog / Updates Page
+- Public-facing page showing version history, bug fixes, new features
+- Route: `/changelog`
+- Format: date + summary of changes, newest first
+- Keeps users informed about what's been fixed/added without needing to read git commits
 
 ### Terms of Service / Disclaimer Page
 - Transparency page covering:
@@ -51,11 +68,25 @@ Tracking documentation gaps, feature requests, and improvements. Open-ended — 
   - Data handling: what Arachne stores (entity config, message queue) and what it doesn't (message content is ephemeral in queue)
   - No guarantees of uptime or availability
   - Operator reserves the right to revoke access without notice for abuse
+- Route: `/terms`
 - Should be linked from the landing page footer and possibly shown during entity creation
 
 ---
 
-## Features
+## The Loom (Dashboard Features)
+
+### Bug Report Submission
+- In-app bug report form (dashboard page or modal)
+- Fields: description, steps to reproduce, entity/server context (auto-filled where possible)
+- Reports need to reach us (options: stored in DB with operator view, or forwarded via Discord DM/webhook to a private channel)
+- Follow-up mechanism: status tracking so reporters can see if their bug was acknowledged/fixed
+- Consider: anonymous vs authenticated reports (authenticated preferred — ties to user context)
+
+### (Add more as needed)
+
+---
+
+## Features (Backend)
 
 ### Trigger Words + Owner Notifications
 - Plan exists: `~/.claude/plans/clever-giggling-sifakis.md`
@@ -68,4 +99,4 @@ Tracking documentation gaps, feature requests, and improvements. Open-ended — 
 
 ---
 
-*Last updated: 25 Feb 2026*
+*Last updated: 26 Feb 2026*

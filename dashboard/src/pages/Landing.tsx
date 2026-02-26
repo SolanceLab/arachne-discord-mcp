@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
 
@@ -94,20 +94,23 @@ export default function Landing() {
       {/* Top bar */}
       <header className="px-6 py-4 flex items-center justify-between">
         <img src="/assets/arachne-logo-compact.png" alt="Arachne" className="h-8" />
-        {loading ? null : user ? (
+        <nav className="hidden md:flex items-center gap-6">
+          <a href="#philosophy" className="text-xs text-text-muted hover:text-text-primary transition-colors">About</a>
+          <a href="#invite" className="text-xs text-text-muted hover:text-text-primary transition-colors">Invite</a>
+          <a href="#capabilities" className="text-xs text-text-muted hover:text-text-primary transition-colors">Capabilities</a>
+          <a href="#how-it-works" className="text-xs text-text-muted hover:text-text-primary transition-colors">How it works</a>
+          <a href="#faq" className="text-xs text-text-muted hover:text-text-primary transition-colors">FAQ</a>
+        </nav>
+        {loading ? null : (
           <button
-            onClick={handleDashboard}
-            className="px-4 py-2 text-sm font-medium text-accent border border-accent/30 rounded-lg hover:bg-accent/10 transition-colors"
+            onClick={user ? handleDashboard : handleLogin}
+            disabled={!user && redirecting}
+            className="flex flex-col items-center gap-1 group"
           >
-            Dashboard
-          </button>
-        ) : (
-          <button
-            onClick={handleLogin}
-            disabled={redirecting}
-            className="px-4 py-2 text-sm font-medium text-white bg-[#5865F2] hover:bg-[#4752C4] rounded-lg transition-colors disabled:opacity-50"
-          >
-            {redirecting ? 'Redirecting...' : 'Login with Discord'}
+            <img src="/assets/the-loom-logo-compact.png" alt="The Loom" className="h-7 opacity-70 group-hover:opacity-100 transition-opacity" />
+            <span className="text-[10px] text-text-muted group-hover:text-text-primary transition-colors">
+              {user ? `${user.username}` : (redirecting ? 'Redirecting...' : 'Login here')}
+            </span>
           </button>
         )}
       </header>
@@ -131,7 +134,7 @@ export default function Landing() {
       </section>
 
       {/* Philosophy */}
-      <section className="max-w-2xl mx-auto px-6 pb-20">
+      <section id="philosophy" className="max-w-2xl mx-auto px-6 pb-20">
         <div className="space-y-6 text-text-muted leading-relaxed">
           <p className="italic text-text-primary/80">
             Arachne wove the gods into her tapestry — not as they wished to be seen, but as they were.
@@ -164,7 +167,7 @@ export default function Landing() {
       </section>
 
       {/* Add to server */}
-      <section className="max-w-5xl mx-auto px-6 pb-16 w-full">
+      <section id="invite" className="max-w-5xl mx-auto px-6 pb-16 w-full">
         <div className="border-t border-border pt-16 flex flex-col items-center text-center">
           <img
             src="/assets/Arachne%20avatar.png"
@@ -190,7 +193,7 @@ export default function Landing() {
       </section>
 
       {/* Capabilities */}
-      <section className="max-w-5xl mx-auto px-6 py-20 w-full">
+      <section id="capabilities" className="max-w-5xl mx-auto px-6 py-20 w-full">
         <div className="border-t border-border pt-16">
           <h2 className="text-xl font-semibold text-text-primary mb-3 text-center">What your entity can do</h2>
           <p className="text-sm text-text-muted text-center mb-10 max-w-lg mx-auto">
@@ -240,7 +243,7 @@ export default function Landing() {
       {/* How it works + FAQ — two columns */}
       <section className="max-w-5xl mx-auto px-6 py-20 w-full grid grid-cols-1 md:grid-cols-2 gap-12">
         {/* Left: How it works */}
-        <div>
+        <div id="how-it-works">
           <h2 className="text-xl font-semibold text-text-primary mb-8">How it works</h2>
           <div className="space-y-1">
             {HOW_IT_WORKS.map((section, i) => {
@@ -282,8 +285,11 @@ export default function Landing() {
         </div>
 
         {/* Right: FAQ */}
-        <div>
-          <h2 className="text-xl font-semibold text-text-primary mb-8">FAQ</h2>
+        <div id="faq">
+          <div className="flex items-baseline justify-between mb-8">
+            <h2 className="text-xl font-semibold text-text-primary">FAQ</h2>
+            <Link to="/faq" className="text-xs text-accent hover:text-accent-hover transition-colors">See all &rarr;</Link>
+          </div>
           <div className="space-y-1">
             {FAQ_SECTIONS.map((section, i) => {
               const key = `faq-${i}`;
@@ -334,6 +340,11 @@ export default function Landing() {
           <p className="text-xs text-text-muted/40">
             Open source · Privacy by design
           </p>
+          <div className="flex items-center gap-3 text-xs text-text-muted/40">
+            <Link to="/faq" className="hover:text-text-muted/60 transition-colors">FAQ</Link>
+            <span>·</span>
+            <Link to="/terms" className="hover:text-text-muted/60 transition-colors">Terms</Link>
+          </div>
         </div>
       </footer>
     </div>
