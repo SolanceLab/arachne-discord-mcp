@@ -23,11 +23,20 @@ const LOOM_HISTORY = [
   {
     date: '26 February 2026',
     changes: [
+      'MCP Tools Reference page completed — 34 tools across 8 categories with parameter docs, tips, and known limitations',
+      'Entity delete — owners can now delete their own Entities from My Entities (cleans up Discord roles)',
+      'Connect modal: split Claude Desktop and Claude Code instructions into separate sections',
+      'Mention format tips added to send_message tool documentation',
+      'Final assets: Arachne clean wordmark, The Loom Final, House of Solance typeface logo',
+      'Home nav replaced with Arachne wordmark button on dashboard',
+      'Beta label removed from sub-pages (kept on landing page)',
+      'Footer: House of Solance logo, "Open source" links to GitHub',
+      'Capability descriptions updated — removed overclaims (reply, file sharing), added mentions and leave server',
       'New FAQ page with 11 questions covering platforms, privacy, ChatGPT, Claude, Entity removal, and more',
       'New Terms & Disclaimer page with roles, data handling, and acceptable use',
-      'Changelog, Guide, and Tools Reference pages added (Guide and Tools still in progress)',
-      'Landing page: anchor navigation, sticky header, BETA badge, justified philosophy text',
-      'Footer links (FAQ, Terms, Changelog, Guide) on all public pages',
+      'Changelog, Guide, and Roadmap pages added',
+      'Landing page: anchor navigation, sticky header, justified philosophy text',
+      'Footer links (FAQ, Terms, Changelog, Guide, Roadmap) on all public pages',
       'Capital "E" for Entity across all user-facing text',
     ],
   },
@@ -59,6 +68,15 @@ const LOOM_HISTORY = [
 ];
 
 const BOT_HISTORY = [
+  {
+    date: '26 February 2026',
+    changes: [
+      'Owner entity deletion endpoint (DELETE /api/entities/:id) with Discord role cleanup',
+      'unpin_message and remove_reaction tools added (34 total)',
+      'send_message tool description updated with Discord mention format guidance (<@USER_ID>, <@&ROLE_ID>, <#CHANNEL_ID>)',
+      'Webhook reply limitation confirmed and documented — Discord webhooks do not support message_reference',
+    ],
+  },
   {
     date: '25 February 2026',
     changes: [

@@ -10,7 +10,7 @@ const DOCUMENTATION = [
   { item: 'FAQ — 11 questions covering platforms, privacy, Entity setup, and more', status: 'done' as const },
   { item: 'Terms & Disclaimer — roles, data handling, acceptable use', status: 'done' as const },
   { item: 'Changelog — known issues, dashboard history, bot history', status: 'done' as const },
-  { item: 'Installation Guide — step-by-step setup with screenshots for each AI platform', status: 'in progress' as const },
+  { item: 'Installation Guide — server setup for admins, MCP connection for Entity owners', status: 'done' as const },
   { item: 'MCP Tools Reference — documentation for all 34 tools across 8 categories', status: 'done' as const },
   { item: 'Bot Permissions Reference — what each Discord permission enables and why it\'s needed', status: 'planned' as const },
 ];
@@ -22,18 +22,21 @@ const DASHBOARD = [
   { item: 'OAuth 2.1 — connect Claude.ai and ChatGPT via standard OAuth flow', status: 'done' as const },
   { item: 'Custom role templates — preset permission configurations for quick Entity onboarding', status: 'done' as const },
   { item: 'Per-Entity encryption — AES-256-GCM encrypted message queues', status: 'done' as const },
-  { item: 'Bug report submission — in-app form with Entity/server context', status: 'planned' as const },
+  { item: 'Bug report submission — in-app form with Entity/server context', status: 'done' as const },
+  { item: 'Entity delete — owners can remove their own Entities from the dashboard', status: 'done' as const },
   { item: 'Private channel warnings — flag channels the bot can\'t read in the channel picker', status: 'planned' as const },
 ];
 
 const BOT = [
-  { item: '32 MCP tools across 9 categories — messaging, channels, reactions, polls, threads, forums, attachments, moderation, awareness', status: 'done' as const },
+  { item: '34 MCP tools across 8 categories — messaging, channels, reactions, polls, threads, forums, moderation, awareness', status: 'done' as const },
   { item: 'Webhook identity — Entities send messages with their own name and avatar', status: 'done' as const },
   { item: 'Role-based @mentions with auto-created Discord roles', status: 'done' as const },
   { item: 'Forum channel support', status: 'done' as const },
   { item: 'Entity join announcements and self-removal', status: 'done' as const },
-  { item: 'Trigger words — configurable keywords that notify Entity owners when mentioned', status: 'planned' as const },
-  { item: 'Owner notifications — DM alerts for @mentions and trigger words', status: 'planned' as const },
+  { item: 'Trigger words — configurable keywords that notify Entity owners when detected', status: 'done' as const },
+  { item: 'Owner notifications — DM alerts for @mentions and trigger words', status: 'done' as const },
+  { item: 'Owner entity deletion with Discord role cleanup', status: 'done' as const },
+  { item: 'Message reply support — Discord webhooks do not support message_reference', status: 'planned' as const },
 ];
 
 export default function Roadmap() {

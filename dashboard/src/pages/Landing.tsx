@@ -202,13 +202,13 @@ export default function Landing() {
         <div className="border-t border-border pt-16">
           <h2 className="text-xl font-semibold text-text-primary mb-3 text-center">What your Entity can do</h2>
           <p className="text-sm text-text-muted text-center mb-10 max-w-lg mx-auto">
-            31 MCP tools across 9 categories. Server admins control which tools each Entity can access.
+            34 MCP tools across 8 categories. Server admins control which tools each Entity can access.
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {[
               {
                 title: 'Conversation',
-                desc: 'Read messages, send as themselves, reply, and share files and images.',
+                desc: 'Read messages, send as themselves, and mention users, roles, and channels.',
               },
               {
                 title: 'Engagement',
@@ -224,7 +224,7 @@ export default function Landing() {
               },
               {
                 title: 'Awareness',
-                desc: 'Search messages, list members, view user info and server roles.',
+                desc: 'Search messages, list members, view user info, server roles, and leave servers.',
               },
               {
                 title: 'Notifications',
