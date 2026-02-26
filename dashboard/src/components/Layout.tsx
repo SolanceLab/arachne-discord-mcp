@@ -67,8 +67,9 @@ export default function Layout() {
 
       {/* Footer */}
       <footer className="px-6 py-6 border-t border-border/30">
-        <div className="flex items-center justify-center">
+        <div className="flex flex-col items-center justify-center gap-2">
           <img src="/assets/House%20of%20Solance.png" alt="House of Solance" className="h-4 opacity-50" />
+          <p className="text-[10px] text-text-muted/30">© 2026 House of Solance · AGPL-3.0</p>
         </div>
       </footer>
     </div>

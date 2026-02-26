@@ -114,7 +114,7 @@ export default function Roadmap() {
             <img src="/assets/House%20of%20Solance.png" alt="House of Solance" className="h-5 opacity-60" />
           </div>
           <p className="text-xs text-text-muted/40">
-            <a href="https://github.com/SolanceLab/arachne-discord-mcp" target="_blank" rel="noopener noreferrer" className="hover:text-text-muted/60 transition-colors">Open source</a> &middot; Privacy by design
+            © 2026 House of Solance &middot; <a href="https://github.com/SolanceLab/arachne-discord-mcp" target="_blank" rel="noopener noreferrer" className="hover:text-text-muted/60 transition-colors">AGPL-3.0</a> &middot; Privacy by design
           </p>
           <div className="flex items-center gap-3 text-xs text-text-muted/40">
             <Link to="/faq" className="hover:text-text-muted/60 transition-colors">FAQ</Link>
