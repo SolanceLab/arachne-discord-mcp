@@ -17,6 +17,10 @@ const KNOWN_ISSUES = [
     issue: 'Bug report unread notification dot may not appear correctly when the reporter and operator are the same Discord user.',
     status: 'open' as const,
   },
+  {
+    issue: 'Trigger word notifications do not fire in channels outside the Entity\'s allowed channel list. @role mentions still work (handled by Discord natively).',
+    status: 'open' as const,
+  },
 ];
 
 const LOOM_HISTORY = [
