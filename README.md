@@ -235,7 +235,7 @@ If you find this useful, consider supporting our work:
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for full text.
+AGPL-3.0 License. See [LICENSE](LICENSE) for full text.
 
 ---
 
