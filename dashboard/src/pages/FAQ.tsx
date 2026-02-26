@@ -20,7 +20,7 @@ const FAQ_ITEMS = [
   {
     title: 'Is Arachne open source?',
     content:
-      'Fully open source and self-hostable. Anyone can run their own instance. The code is public on GitHub (github.com/SolanceLab/arachne-discord-mcp), the protocol is standard MCP, and there is no vendor lock-in.',
+      'Fully open source under AGPL-3.0 and self-hostable. Anyone can run their own instance. The code is public on GitHub (github.com/SolanceLab/arachne-discord-mcp), the protocol is standard MCP, and there is no vendor lock-in. If you modify Arachne and host it publicly, the license requires you to share your changes under the same terms and display attribution to House of Solance.',
   },
   {
     title: 'What about ChatGPT?',

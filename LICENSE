@@ -4,6 +4,17 @@ Copyright (C) 2026 House of Solance
 Licensed under the GNU Affero General Public License v3.0.
 See below for the full license text.
 
+Additional Terms (per Section 7(b) of the AGPL-3.0):
+
+  If you modify this software and make it available over a network,
+  you must display the following attribution in a user-visible location
+  (e.g. a footer, about page, or startup output):
+
+    "Based on Arachne by House of Solance"
+
+  This requirement applies to all modified versions distributed or
+  hosted publicly. It does not apply to unmodified copies.
+
 ---
 
                     GNU AFFERO GENERAL PUBLIC LICENSE
