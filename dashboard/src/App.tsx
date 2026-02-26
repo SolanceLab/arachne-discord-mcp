@@ -13,6 +13,7 @@ import MyServers from './pages/MyServers';
 import Operator from './pages/Operator';
 import Tools from './pages/Tools';
 import BugReports from './pages/BugReports';
+import ConfigDoctor from './pages/ConfigDoctor';
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
         <Route path="/operator" element={<Operator />} />
         <Route path="/tools" element={<Tools />} />
         <Route path="/bug-reports" element={<BugReports />} />
+        <Route path="/config-doctor" element={<ConfigDoctor />} />
       </Route>
     </Routes>
   );

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { apiFetch, clearToken } from '../lib/api';
 import ApiKeyModal from '../components/ApiKeyModal';
 
@@ -727,16 +728,20 @@ export default function MyEntities() {
                   </ol>
                   <div className="relative">
                     <pre className="text-[11px] text-text-primary bg-bg-deep px-3 py-2.5 rounded border border-border whitespace-pre-wrap break-all">{`"${serverName}": {
-  "url": "${mcpUrl}",
-  "headers": {
-    "Authorization": "Bearer YOUR_API_KEY"
-  }
+  "command": "npx",
+  "args": [
+    "-y",
+    "mcp-remote",
+    "${mcpUrl}",
+    "--header",
+    "Authorization:Bearer YOUR_API_KEY"
+  ]
 }`}</pre>
                     <button
                       onClick={() => copyToClipboard(JSON.stringify({
                         [serverName]: {
-                          url: mcpUrl,
-                          headers: { Authorization: 'Bearer YOUR_API_KEY' },
+                          command: 'npx',
+                          args: ['-y', 'mcp-remote', mcpUrl, '--header', 'Authorization:Bearer YOUR_API_KEY'],
                         },
                       }, null, 2).slice(2, -2).trim(), `config-${entity.id}`)}
                       className={`absolute top-1.5 right-1.5 px-2 py-0.5 text-[10px] border border-border rounded transition-colors ${copiedField === `config-${entity.id}` ? 'bg-success/20 text-success border-success/30' : 'bg-bg-surface hover:bg-border'}`}
@@ -745,7 +750,10 @@ export default function MyEntities() {
                     </button>
                   </div>
                   <p className="text-[10px] text-text-muted mt-1.5">
-                    Replace <code className="text-warning">YOUR_API_KEY</code> with the key you received when creating this entity. Restart Claude Desktop after saving.
+                    Replace <code className="text-warning">YOUR_API_KEY</code> with the key you received when creating this entity. Requires <code className="text-accent">Node.js</code> installed. Restart Claude Desktop after saving.
+                  </p>
+                  <p className="text-[10px] text-text-muted mt-1">
+                    Claude Desktop won't start? <Link to="/config-doctor" onClick={() => setConnectingFor(null)} className="text-accent hover:underline">Check your config</Link>
                   </p>
                 </div>
 

@@ -9,6 +9,7 @@ export default function Layout() {
     { to: '/servers', label: 'My Servers', show: (user?.admin_servers.length ?? 0) > 0 },
     { to: '/tools', label: 'Tools', show: true },
     { to: '/bug-reports', label: 'Bug Reports', show: true },
+    { to: '/config-doctor', label: 'Config Doctor', show: true },
     { to: '/operator', label: 'Operator', show: user?.is_operator },
   ];
 
