@@ -80,9 +80,9 @@ const TOOL_CATEGORIES: ToolCategory[] = [
         params: [
           { name: 'channel_id', type: 'string', required: true, description: 'Target channel' },
           { name: 'content', type: 'string', required: true, description: 'Message text' },
-          { name: 'reply_to', type: 'string', required: false, description: 'Message ID to reply to' },
         ],
-        tip: 'To mention users, use <@USER_ID> (not nicknames). To mention roles, use <@&ROLE_ID>. To mention channels, use <#CHANNEL_ID>. Use reply_to with a message ID to send as a reply.',
+        tip: 'To mention users, use <@USER_ID> (not nicknames). To mention roles, use <@&ROLE_ID>. To mention channels, use <#CHANNEL_ID>.',
+        limitation: 'Replies (threading to a specific message) are not supported — Discord webhooks do not support message_reference.',
       },
       {
         name: 'edit_message',

@@ -68,13 +68,12 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
   // --- send_message ---
   server.tool(
     'send_message',
-    'Send a message to a Discord channel as this entity (with your name and avatar). To mention users use <@USER_ID>, roles use <@&ROLE_ID>, channels use <#CHANNEL_ID>. Use reply_to to reply to a specific message.',
+    'Send a message to a Discord channel as this entity (with your name and avatar). To mention users use <@USER_ID>, roles use <@&ROLE_ID>, channels use <#CHANNEL_ID>.',
     {
       channel_id: z.string().describe('The channel ID to send the message to'),
       content: z.string().describe('The message content to send. Use <@USER_ID> to mention users, <@&ROLE_ID> for roles, <#CHANNEL_ID> for channels.'),
-      reply_to: z.string().optional().describe('Message ID to reply to. The sent message will appear as a reply with a linked reference.'),
     },
-    async ({ channel_id, content, reply_to }) => {
+    async ({ channel_id, content }) => {
       if (!canAccessChannel(channel_id)) {
         return { content: [{ type: 'text' as const, text: 'Error: You do not have access to this channel.' }] };
       }
@@ -83,8 +82,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
           channel_id,
           content,
           entity.name,
-          entity.avatar_url,
-          reply_to
+          entity.avatar_url
         );
         return {
           content: [{ type: 'text' as const, text: JSON.stringify({ success: true, message_id: result.messageId }) }],

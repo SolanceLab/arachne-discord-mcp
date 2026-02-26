@@ -71,32 +71,9 @@ export class WebhookManager {
     channelId: string,
     content: string,
     entityName: string,
-    entityAvatarUrl?: string | null,
-    replyTo?: string
+    entityAvatarUrl?: string | null
   ): Promise<{ messageId: string }> {
     const webhook = await this.getWebhook(channelId);
-
-    if (replyTo) {
-      // Discord.js webhook.send() doesn't expose message_reference,
-      // so use the REST endpoint directly for replies.
-      const resp = await fetch(`https://discord.com/api/v10/webhooks/${webhook.id}/${webhook.token}?wait=true`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content,
-          username: entityName,
-          avatar_url: entityAvatarUrl || undefined,
-          allowed_mentions: { parse: ['users'] },
-          message_reference: { message_id: replyTo, channel_id: channelId },
-        }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error((err as any).message || `Discord API error ${resp.status}`);
-      }
-      const data = await resp.json() as { id: string };
-      return { messageId: data.id };
-    }
 
     const msg = await webhook.send({
       content,
