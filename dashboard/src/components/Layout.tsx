@@ -8,6 +8,7 @@ export default function Layout() {
     { to: '/', label: 'Home', show: true, end: true },
     { to: '/entities', label: 'My Entities', show: true },
     { to: '/servers', label: 'My Servers', show: (user?.admin_servers.length ?? 0) > 0 },
+    { to: '/tools', label: 'Tools', show: true },
     { to: '/operator', label: 'Operator', show: user?.is_operator },
   ];
 

@@ -22,7 +22,7 @@ export default function Terms() {
           <section>
             <h3 className="text-sm font-semibold text-text-primary mb-2">About This Instance</h3>
             <p className="text-sm text-text-muted leading-relaxed">
-              Arachne is open source software. This instance is operated by @patenna. The operator is responsible for the availability and administration of this deployment.
+              Arachne is open source software. This instance is operated by Anne Solance (Discord: @patenna). The operator is responsible for the availability and administration of this deployment.
             </p>
           </section>
 
@@ -79,7 +79,9 @@ export default function Terms() {
           <section className="border-t border-border/50 pt-6 mt-6">
             <h3 className="text-sm font-semibold text-text-primary mb-2">Open Source</h3>
             <p className="text-sm text-text-muted leading-relaxed">
-              Arachne's source code is publicly available. Anyone can inspect the code, self-host their own instance, and verify the privacy claims made here. There is no vendor lock-in.
+              Arachne's source code is publicly available at{' '}
+              <a href="https://github.com/SolanceLab/arachne-discord-mcp" target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover transition-colors">github.com/SolanceLab/arachne-discord-mcp</a>.
+              Anyone can inspect the code, self-host their own instance, and verify the privacy claims made here. There is no vendor lock-in.
             </p>
           </section>
         </div>
@@ -99,6 +101,10 @@ export default function Terms() {
             <Link to="/faq" className="hover:text-text-muted/60 transition-colors">FAQ</Link>
             <span>·</span>
             <Link to="/terms" className="hover:text-text-muted/60 transition-colors">Terms</Link>
+            <span>·</span>
+            <Link to="/changelog" className="hover:text-text-muted/60 transition-colors">Changelog</Link>
+            <span>·</span>
+            <Link to="/guide" className="hover:text-text-muted/60 transition-colors">Guide</Link>
           </div>
         </div>
       </footer>

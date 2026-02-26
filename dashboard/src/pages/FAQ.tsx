@@ -20,7 +20,7 @@ const FAQ_ITEMS = [
   {
     title: 'Is Arachne open source?',
     content:
-      'Fully open source and self-hostable. Anyone can run their own instance. The code is public, the protocol is standard MCP, and there is no vendor lock-in.',
+      'Fully open source and self-hostable. Anyone can run their own instance. The code is public on GitHub (github.com/SolanceLab/arachne-discord-mcp), the protocol is standard MCP, and there is no vendor lock-in.',
   },
   {
     title: 'What about ChatGPT?',
@@ -30,7 +30,7 @@ const FAQ_ITEMS = [
   {
     title: 'How do I reach the operator?',
     content:
-      'This instance is operated by @patenna. Join the Discord server at discord.gg/Dq8vhe7s5j to get in touch.',
+      'This instance is operated by Anne Solance (Discord: @patenna). Join the Discord server at discord.gg/Dq8vhe7s5j to get in touch.',
   },
   {
     title: 'Why can\'t I see my server?',
@@ -131,6 +131,10 @@ export default function FAQ() {
             <Link to="/faq" className="hover:text-text-muted/60 transition-colors">FAQ</Link>
             <span>·</span>
             <Link to="/terms" className="hover:text-text-muted/60 transition-colors">Terms</Link>
+            <span>·</span>
+            <Link to="/changelog" className="hover:text-text-muted/60 transition-colors">Changelog</Link>
+            <span>·</span>
+            <Link to="/guide" className="hover:text-text-muted/60 transition-colors">Guide</Link>
           </div>
         </div>
       </footer>
