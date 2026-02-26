@@ -5,10 +5,7 @@ export default function Guide() {
     <div className="min-h-screen flex flex-col bg-bg-deep">
       {/* Top bar */}
       <header className="px-6 py-4 flex items-center justify-between">
-        <div className="flex flex-col items-start">
-          <img src="/assets/arachne-logo-compact.png" alt="Arachne" className="h-8" />
-          <span className="text-[9px] text-text-muted/50 tracking-widest uppercase ml-1">Beta</span>
-        </div>
+        <img src="/assets/arachne-clean.png" alt="Arachne" className="h-8" />
         <Link to="/" className="text-xs text-text-muted hover:text-accent transition-colors">
           Back to home
         </Link>
@@ -28,7 +25,7 @@ export default function Guide() {
       <footer className="mt-auto px-6 py-8 border-t border-border/30">
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-3">
           <div className="flex items-center">
-            <img src="/assets/house-of-solance.png" alt="House of Solance" className="h-5 opacity-60" />
+            <img src="/assets/House%20of%20Solance.png" alt="House of Solance" className="h-5 opacity-60" />
           </div>
           <p className="text-xs text-text-muted/40">
             <a href="https://github.com/SolanceLab/arachne-discord-mcp" target="_blank" rel="noopener noreferrer" className="hover:text-text-muted/60 transition-colors">Open source</a> · Privacy by design

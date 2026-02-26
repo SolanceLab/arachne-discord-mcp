@@ -93,9 +93,8 @@ export default function Landing() {
     <div className="min-h-screen flex flex-col">
       {/* Top bar — sticky */}
       <header className="sticky top-0 z-50 bg-bg-deep/95 backdrop-blur-sm border-b border-border/30 px-6 py-4 grid grid-cols-[1fr_auto_1fr] items-center">
-        <div className="relative justify-self-start">
-          <img src="/assets/arachne-logo-compact.png" alt="Arachne" className="h-8" />
-          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] text-text-muted/40 tracking-[0.2em] uppercase">Beta</span>
+        <div className="justify-self-start">
+          <img src="/assets/arachne-clean.png" alt="Arachne" className="h-8" />
         </div>
         <nav className="hidden md:flex items-center gap-6">
           <a href="#philosophy" className="text-xs text-text-muted hover:text-text-primary transition-colors">About</a>
@@ -112,7 +111,7 @@ export default function Landing() {
             disabled={!user && redirecting}
             className="flex flex-col items-center gap-1 group justify-self-end"
           >
-            <img src="/assets/the-loom-logo-compact.png" alt="The Loom" className="h-10 opacity-70 group-hover:opacity-100 transition-opacity" />
+            <img src="/assets/The%20Loom%20Final.png" alt="The Loom" className="h-10 opacity-70 group-hover:opacity-100 transition-opacity" />
             <span className="text-[10px] text-text-muted group-hover:text-text-primary transition-colors">
               {user ? `${user.username}` : (redirecting ? 'Redirecting...' : 'Login here')}
             </span>
@@ -129,9 +128,9 @@ export default function Landing() {
       {/* Branding */}
       <section className="flex flex-col items-center pt-12 pb-16 px-6">
         <img
-          src="/assets/arachne-logo.png"
+          src="/assets/arachne-clean.png"
           alt="Arachne"
-          className="h-16 mb-4"
+          className="h-14 mb-4"
         />
         <p className="text-lg text-text-muted">
           One bot. Every voice.
@@ -339,7 +338,7 @@ export default function Landing() {
       <footer className="mt-auto px-6 py-8 border-t border-border/30">
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-3">
           <div className="flex items-center">
-            <img src="/assets/house-of-solance.png" alt="House of Solance" className="h-5 opacity-60" />
+            <img src="/assets/House%20of%20Solance.png" alt="House of Solance" className="h-5 opacity-60" />
           </div>
           <p className="text-xs text-text-muted/40">
             <a href="https://github.com/SolanceLab/arachne-discord-mcp" target="_blank" rel="noopener noreferrer" className="hover:text-text-muted/60 transition-colors">Open source</a> · Privacy by design

@@ -5,7 +5,6 @@ export default function Layout() {
   const { user, logout } = useAuth();
 
   const navItems = [
-    { to: '/', label: 'Home', show: true, end: true },
     { to: '/entities', label: 'My Entities', show: true },
     { to: '/servers', label: 'My Servers', show: (user?.admin_servers.length ?? 0) > 0 },
     { to: '/tools', label: 'Tools', show: true },
@@ -21,17 +20,20 @@ export default function Layout() {
     <div className="min-h-screen flex flex-col">
       {/* Site header */}
       <div className="bg-bg-surface border-b border-border/50 px-6 py-4 text-center">
-        <Link to="/"><img src="/assets/the-loom-logo-compact.png" alt="The Loom" className="h-16 mx-auto hover:opacity-80 transition-opacity" /></Link>
+        <Link to="/"><img src="/assets/The%20Loom%20Final.png" alt="The Loom" className="h-16 mx-auto hover:opacity-80 transition-opacity" /></Link>
       </div>
 
       {/* Navigation bar */}
       <header className="bg-bg-surface border-b border-border px-6 py-2 flex items-center justify-between">
-        <nav className="flex gap-1">
+        <nav className="flex items-center gap-1">
+          <Link to="/" className="px-2 py-1 hover:opacity-80 transition-opacity">
+            <img src="/assets/arachne-clean.png" alt="Arachne" className="h-5" />
+          </Link>
+          <div className="w-px h-4 bg-border/50 mx-1" />
           {navItems.filter(n => n.show).map(n => (
             <NavLink
               key={n.to}
               to={n.to}
-              end={n.end}
               className={({ isActive }) =>
                 `px-3 py-1.5 rounded text-sm transition-colors ${
                   isActive
@@ -66,7 +68,7 @@ export default function Layout() {
       {/* Footer */}
       <footer className="px-6 py-6 border-t border-border/30">
         <div className="flex items-center justify-center">
-          <img src="/assets/house-of-solance.png" alt="House of Solance" className="h-4 opacity-50" />
+          <img src="/assets/House%20of%20Solance.png" alt="House of Solance" className="h-4 opacity-50" />
         </div>
       </footer>
     </div>
