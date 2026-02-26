@@ -93,8 +93,9 @@ export default function Landing() {
     <div className="min-h-screen flex flex-col">
       {/* Top bar — sticky */}
       <header className="sticky top-0 z-50 bg-bg-deep/95 backdrop-blur-sm border-b border-border/30 px-6 py-4 grid grid-cols-[1fr_auto_1fr] items-center">
-        <div className="justify-self-start">
+        <div className="relative justify-self-start">
           <img src="/assets/arachne-clean.png" alt="Arachne" className="h-8" />
+          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] text-text-muted/40 tracking-[0.2em] uppercase">Beta</span>
         </div>
         <nav className="hidden md:flex items-center gap-6">
           <a href="#philosophy" className="text-xs text-text-muted hover:text-text-primary transition-colors">About</a>
