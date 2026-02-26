@@ -6,6 +6,7 @@ import fs from 'fs';
 import sharp from 'sharp';
 import type { Client } from 'discord.js';
 import { requireAuth } from './middleware.js';
+import { deleteEntityRole } from './discord-api.js';
 import type { EntityRegistry } from '../entity-registry.js';
 
 const DATA_DIR = process.env.DATA_DIR || '/data';
@@ -287,6 +288,32 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
     }
     const request = registry.createServerRequest(entity.id, server_id, req.user!.sub, req.user!.username);
     res.json(request);
+  });
+
+  // DELETE /api/entities/:id — owner deletes their own entity
+  router.delete('/:id', async (req: Request, res: Response) => {
+    const entity = registry.getEntity(req.params.id as string);
+    if (!entity || !entity.active) {
+      res.status(404).json({ error: 'Entity not found' });
+      return;
+    }
+    if (entity.owner_id !== req.user!.sub && !req.user!.is_operator) {
+      res.status(403).json({ error: 'Not your entity' });
+      return;
+    }
+    // Clean up Discord roles
+    const servers = registry.getEntityServers(entity.id);
+    for (const s of servers) {
+      if (s.role_id) {
+        try { await deleteEntityRole(s.server_id, s.role_id); } catch { /* best effort */ }
+      }
+    }
+    const deleted = registry.deleteEntity(entity.id);
+    if (!deleted) {
+      res.status(500).json({ error: 'Failed to delete entity' });
+      return;
+    }
+    res.json({ success: true });
   });
 
   return router;

@@ -21,7 +21,7 @@ export default function Layout() {
     <div className="min-h-screen flex flex-col">
       {/* Site header */}
       <div className="bg-bg-surface border-b border-border/50 px-6 py-4 text-center">
-        <Link to="/" className="text-2xl font-bold tracking-wide text-accent hover:text-accent-hover transition-colors uppercase">The Loom</Link>
+        <Link to="/"><img src="/assets/the-loom-logo-compact.png" alt="The Loom" className="h-16 mx-auto hover:opacity-80 transition-opacity" /></Link>
       </div>
 
       {/* Navigation bar */}
@@ -65,9 +65,8 @@ export default function Layout() {
 
       {/* Footer */}
       <footer className="px-6 py-6 border-t border-border/30">
-        <div className="flex items-center justify-center gap-2">
-          <img src="/assets/Symbol.png" alt="" className="h-4 w-4 opacity-50" />
-          <span className="text-xs text-text-muted/50 font-medium tracking-wide">House of Solance</span>
+        <div className="flex items-center justify-center">
+          <img src="/assets/house-of-solance.png" alt="House of Solance" className="h-4 opacity-50" />
         </div>
       </footer>
     </div>

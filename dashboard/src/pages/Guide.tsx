@@ -27,12 +27,11 @@ export default function Guide() {
       {/* Footer */}
       <footer className="mt-auto px-6 py-8 border-t border-border/30">
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-3">
-          <div className="flex items-center gap-2">
-            <img src="/assets/Symbol.png" alt="" className="h-5 w-5 opacity-60" />
-            <span className="text-xs text-text-muted/60 font-medium tracking-wide">House of Solance</span>
+          <div className="flex items-center">
+            <img src="/assets/house-of-solance.png" alt="House of Solance" className="h-5 opacity-60" />
           </div>
           <p className="text-xs text-text-muted/40">
-            Open source · Privacy by design
+            <a href="https://github.com/SolanceLab/arachne-discord-mcp" target="_blank" rel="noopener noreferrer" className="hover:text-text-muted/60 transition-colors">Open source</a> · Privacy by design
           </p>
           <div className="flex items-center gap-3 text-xs text-text-muted/40">
             <Link to="/faq" className="hover:text-text-muted/60 transition-colors">FAQ</Link>

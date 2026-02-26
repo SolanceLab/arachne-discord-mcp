@@ -158,6 +158,12 @@ export default function MyEntities() {
     setApiKey(data.api_key);
   };
 
+  const handleDelete = async (entityId: string, entityName: string) => {
+    if (!confirm(`Permanently delete ${entityName}? This removes the entity from all servers and cannot be undone.`)) return;
+    await apiFetch(`/api/entities/${entityId}`, { method: 'DELETE' });
+    setEntities(prev => prev.filter(e => e.id !== entityId));
+  };
+
   const startEdit = (entity: Entity) => {
     setEditing(entity.id);
     setEditName(entity.name);
@@ -494,6 +500,12 @@ export default function MyEntities() {
                       className="px-2.5 py-1 text-xs bg-bg-surface hover:bg-border text-warning rounded transition-colors"
                     >
                       Regen Key
+                    </button>
+                    <button
+                      onClick={() => handleDelete(entity.id, entity.name)}
+                      className="px-2.5 py-1 text-xs bg-bg-surface hover:bg-red-900/30 text-red-400 rounded transition-colors"
+                    >
+                      Delete
                     </button>
                   </div>
 
