@@ -53,20 +53,29 @@ export class Router {
 
     // Push to each entity's queue (encrypted if key is available)
     for (const entity of entities) {
-      // Hard filter: skip if channel is blocked for this entity
+      // Hard filter: skip if channel is blocked for this entity (overrides everything)
       const blockedChannels: string[] = JSON.parse(entity.blocked_channels || '[]');
       if (blockedChannels.includes(msg.channelId)) continue;
 
-      // Trigger word detection
+      // Trigger word + mention detection (runs before watch filter — triggers punch through)
       const triggers: string[] = JSON.parse(entity.triggers || '[]');
       const triggered = triggers.length > 0 && triggers.some(t => contentLower.includes(t.toLowerCase()));
-
       const addressed = addressedEntityIds.has(entity.id);
+
+      // Watch channel filter: if watch_channels is set, only queue from those channels
+      // BUT triggered/addressed messages always get through
+      const watchChannels: string[] = JSON.parse(entity.watch_channels || '[]');
+      if (watchChannels.length > 0 && !watchChannels.includes(msg.channelId) && !triggered && !addressed) continue;
+
+      const guild = this.discordClient.guilds.cache.get(msg.serverId);
+      const ch = guild?.channels.cache.get(msg.channelId);
+      const resolvedChannelName = ch && 'name' in ch ? ch.name : msg.channelId;
 
       const encKey = keyStore.get(entity.id);
       this.bus.push(entity.id, {
         messageId: msg.messageId,
         channelId: msg.channelId,
+        channelName: resolvedChannelName,
         serverId: msg.serverId,
         authorId: msg.authorId,
         authorName: msg.authorName,

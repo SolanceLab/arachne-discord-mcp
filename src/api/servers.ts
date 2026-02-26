@@ -39,6 +39,7 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
       ChannelType.GuildForum,
     ]);
 
+    const botMember = guild.members.me;
     const channels = guild.channels.cache
       .filter(ch => textTypes.has(ch.type))
       .map(ch => ({
@@ -48,6 +49,7 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
         category_id: ch.parentId || null,
         category_name: ch.parent?.name || null,
         position: 'position' in ch ? (ch.position as number) : 0,
+        readable: botMember ? ch.permissionsFor(botMember).has('ViewChannel') : true,
       }))
       .sort((a, b) => {
         // Sort by category name (null last), then position

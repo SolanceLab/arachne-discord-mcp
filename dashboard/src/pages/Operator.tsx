@@ -3,6 +3,21 @@ import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
 import { Navigate } from 'react-router-dom';
 import ApiKeyModal from '../components/ApiKeyModal';
+import BugReportThread from '../components/BugReportThread';
+
+interface BugReport {
+  id: string;
+  reporter_id: string;
+  reporter_name: string | null;
+  entity_id: string | null;
+  server_id: string | null;
+  title: string;
+  description: string;
+  status: 'open' | 'resolved';
+  created_at: string;
+  resolved_at: string | null;
+  unread_count: number;
+}
 
 interface EntityServer {
   server_id: string;
@@ -39,8 +54,12 @@ export default function Operator() {
   const [entities, setEntities] = useState<FullEntity[]>([]);
   const [servers, setServers] = useState<Server[]>([]);
   const [bannedServers, setBannedServers] = useState<BannedServer[]>([]);
+  const [bugReports, setBugReports] = useState<BugReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [apiKey, setApiKey] = useState<string | null>(null);
+
+  const [expandedReport, setExpandedReport] = useState<string | null>(null);
+  const [savingOwner, setSavingOwner] = useState(false);
 
   // Create entity form
   const [showCreate, setShowCreate] = useState(false);
@@ -67,10 +86,12 @@ export default function Operator() {
       apiFetch<FullEntity[]>('/api/operator/entities'),
       apiFetch<Server[]>('/api/operator/servers'),
       apiFetch<BannedServer[]>('/api/operator/banned-servers'),
-    ]).then(([e, s, b]) => {
+      apiFetch<BugReport[]>('/api/bug-reports/all'),
+    ]).then(([e, s, b, br]) => {
       setEntities(e);
       setServers(s);
       setBannedServers(b);
+      setBugReports(br);
     }).finally(() => setLoading(false));
   }, [isOperator, refreshKey]);
 
@@ -140,11 +161,21 @@ export default function Operator() {
     refresh();
   };
 
+  const handleBugReportStatus = async (reportId: string, status: 'open' | 'resolved') => {
+    await apiFetch(`/api/bug-reports/${reportId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    refresh();
+  };
+
   const handleAssignOwner = async (entityId: string) => {
+    setSavingOwner(true);
     await apiFetch(`/api/operator/entities/${entityId}/owner`, {
       method: 'PATCH',
       body: JSON.stringify({ owner_id: ownerInput.trim() || null }),
     });
+    setSavingOwner(false);
     setAssigningOwner(null);
     setOwnerInput('');
     refresh();
@@ -283,9 +314,10 @@ export default function Operator() {
                 />
                 <button
                   onClick={() => handleAssignOwner(entity.id)}
-                  className="px-3 py-1.5 text-xs bg-accent hover:bg-accent-hover text-white rounded transition-colors"
+                  disabled={savingOwner}
+                  className="px-3 py-1.5 text-xs bg-accent hover:bg-accent-hover text-white rounded transition-colors disabled:opacity-40"
                 >
-                  Save
+                  {savingOwner ? 'Saving...' : 'Save'}
                 </button>
               </div>
             )}
@@ -367,6 +399,80 @@ export default function Operator() {
           </div>
         </div>
       )}
+
+      {/* Bug reports */}
+      <div className="mt-8">
+        <h3 className="text-sm font-medium text-text-muted mb-3">
+          Bug Reports ({bugReports.length})
+          {bugReports.reduce((sum, r) => sum + r.unread_count, 0) > 0 && (
+            <span className="ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-accent text-white text-[10px] font-bold px-1">
+              {bugReports.reduce((sum, r) => sum + r.unread_count, 0)}
+            </span>
+          )}
+        </h3>
+        {bugReports.length === 0 ? (
+          <p className="text-xs text-text-muted/50">No reports submitted.</p>
+        ) : (
+          <div className="space-y-2">
+            {bugReports.map(report => (
+              <div key={report.id} className="bg-bg-card border border-border rounded-lg p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border flex-shrink-0 capitalize ${
+                        report.status === 'open'
+                          ? 'bg-warning/15 text-warning border-warning/30'
+                          : 'bg-success/15 text-success border-success/30'
+                      }`}>
+                        {report.status}
+                      </span>
+                      <h4 className="text-sm font-medium text-text-primary truncate">{report.title}</h4>
+                    </div>
+                    <p className="text-xs text-text-muted leading-relaxed mt-1">{report.description}</p>
+                    <div className="flex items-center gap-3 mt-2 text-[10px] text-text-muted/50">
+                      <span>By: {report.reporter_name || report.reporter_id}</span>
+                      <span>{new Date(report.created_at).toLocaleDateString()}</span>
+                      {report.entity_id && (
+                        <span>Entity: {entities.find(e => e.id === report.entity_id)?.name || report.entity_id.slice(0, 8)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <div className="relative">
+                      <button
+                        onClick={() => {
+                          const opening = expandedReport !== report.id;
+                          setExpandedReport(opening ? report.id : null);
+                          if (opening && report.unread_count > 0) {
+                            setBugReports(prev => prev.map(r => r.id === report.id ? { ...r, unread_count: 0 } : r));
+                          }
+                        }}
+                        className="px-3 py-1.5 text-xs bg-bg-surface hover:bg-border text-text-muted rounded transition-colors"
+                      >
+                        {expandedReport === report.id ? 'Close' : 'Discuss'}
+                      </button>
+                      {report.unread_count > 0 && expandedReport !== report.id && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500" />
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleBugReportStatus(report.id, report.status === 'open' ? 'resolved' : 'open')}
+                      className={`px-3 py-1.5 text-xs rounded transition-colors ${
+                        report.status === 'open'
+                          ? 'bg-bg-surface hover:bg-success/20 text-success border border-border'
+                          : 'bg-bg-surface hover:bg-warning/20 text-warning border border-border'
+                      }`}
+                    >
+                      {report.status === 'open' ? 'Resolve' : 'Reopen'}
+                    </button>
+                  </div>
+                </div>
+                <BugReportThread reportId={report.id} isOpen={expandedReport === report.id} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {apiKey && <ApiKeyModal apiKey={apiKey} onClose={() => setApiKey(null)} />}
     </div>

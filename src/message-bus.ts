@@ -99,6 +99,7 @@ export class MessageBus {
       return {
         id: m.messageId,
         channel_id: m.channelId,
+        channel_name: m.channelName,
         server_id: m.serverId,
         author_id: m.authorId,
         author_name: m.authorName,

@@ -82,6 +82,8 @@ export default function MyServers() {
   const [configuringId, setConfiguringId] = useState<string | null>(null);
   const [configChannels, setConfigChannels] = useState<string[]>([]);
   const [configTools, setConfigTools] = useState<string[]>([]);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   const servers = user?.admin_servers || [];
 
@@ -137,22 +139,22 @@ export default function MyServers() {
 
   const saveTemplate = async () => {
     if (!selectedServer || !newTemplateName.trim()) return;
+    setSavingTemplate(true);
 
     if (editingTemplateId) {
-      // Update existing
       const updated = await apiFetch<ServerTemplateData>(`/api/servers/${selectedServer}/templates/${editingTemplateId}`, {
         method: 'PATCH',
         body: JSON.stringify({ name: newTemplateName.trim(), channels: templateChannels, tools: templateTools }),
       });
       setTemplates(prev => prev.map(t => t.id === editingTemplateId ? updated : t));
     } else {
-      // Create new
       const created = await apiFetch<ServerTemplateData>(`/api/servers/${selectedServer}/templates`, {
         method: 'POST',
         body: JSON.stringify({ name: newTemplateName.trim(), channels: templateChannels, tools: templateTools }),
       });
       setTemplates(prev => [created, ...prev]);
     }
+    setSavingTemplate(false);
     setNewTemplateName('');
     setTemplateChannels([]);
     setTemplateTools([]);
@@ -216,10 +218,12 @@ export default function MyServers() {
   };
 
   const saveConfig = async (entityId: string) => {
+    setSavingConfig(true);
     await apiFetch(`/api/servers/${selectedServer}/entities/${entityId}`, {
       method: 'PATCH',
       body: JSON.stringify({ channels: configChannels, tools: configTools }),
     });
+    setSavingConfig(false);
     setConfiguringId(null);
     const e = await apiFetch<ServerEntity[]>(`/api/servers/${selectedServer}/entities`);
     setEntities(e);
@@ -377,10 +381,10 @@ export default function MyServers() {
 
                     <button
                       onClick={saveTemplate}
-                      disabled={!newTemplateName.trim()}
+                      disabled={!newTemplateName.trim() || savingTemplate}
                       className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-40 text-white text-sm rounded transition-colors"
                     >
-                      {editingTemplateId ? 'Update Template' : 'Save Template'}
+                      {savingTemplate ? 'Saving...' : editingTemplateId ? 'Update Template' : 'Save Template'}
                     </button>
                   </div>
                 )}
@@ -654,9 +658,10 @@ export default function MyServers() {
 
                         <button
                           onClick={() => saveConfig(entity.id)}
-                          className="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm rounded transition-colors"
+                          disabled={savingConfig}
+                          className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-40 text-white text-sm rounded transition-colors"
                         >
-                          Save Whitelist
+                          {savingConfig ? 'Saving...' : 'Save Whitelist'}
                         </button>
                       </div>
                     )}

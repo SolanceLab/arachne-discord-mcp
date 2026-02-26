@@ -13,6 +13,7 @@ import { createEntitiesRouter } from './api/entities.js';
 import { createServersRouter } from './api/servers.js';
 import { createOperatorRouter } from './api/operator.js';
 import { createOAuthRouter } from './api/oauth.js';
+import { createBugReportsRouter } from './api/bug-reports.js';
 import type { EntityRegistry } from './entity-registry.js';
 import type { MessageBus } from './message-bus.js';
 import type { WebhookManager } from './webhook-manager.js';
@@ -81,6 +82,7 @@ export function createMcpHttpServer(deps: McpServerDeps): express.Express {
   app.use('/api/entities', createEntitiesRouter(registry, discordClient));
   app.use('/api/servers', createServersRouter(registry, discordClient));
   app.use('/api/operator', createOperatorRouter(registry, discordClient));
+  app.use('/api/bug-reports', createBugReportsRouter(registry));
 
   // DELETE for MCP session close
   app.delete('/mcp/:entity_id', (_req: Request, res: Response) => {

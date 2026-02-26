@@ -8,6 +8,7 @@ export interface DiscordChannel {
   category_id: string | null;
   category_name: string | null;
   position: number;
+  readable?: boolean;
 }
 
 interface ChannelPickerProps {
@@ -143,6 +144,9 @@ export default function ChannelPicker({ serverId, selected, onChange, channels: 
                   />
                   <span className="text-sm text-text-primary">
                     <span className="text-text-muted">#</span>{ch.name}
+                    {ch.readable === false && (
+                      <span className="ml-1 text-amber-400 cursor-help" title="Arachne cannot access this channel. Add the bot to the channel permissions.">&#9888;</span>
+                    )}
                   </span>
                 </label>
               ))}

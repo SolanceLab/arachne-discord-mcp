@@ -42,6 +42,21 @@ Status: **in progress** — public pages (FAQ, Terms, Changelog, Guide) live wit
 - Explain that these are the *bot-level* permissions; individual entities are further restricted by their per-server tool/channel whitelist
 - Note: all permissions must be granted at invite time via the Discord OAuth2 URL
 
+**Known limitation — Private channels:**
+- Discord private channels require the bot to be **explicitly added** to the channel's permission overrides. Bot-level permissions alone are not enough.
+- If Arachne is not added to a private channel: messages are invisible to the bot, nothing gets queued for entities, `get_channel_history` returns a permission error, and `send_message` via webhook may still work (webhooks bypass channel visibility).
+- **Impact:** Entity owners may configure a private channel in their watch list, but the entity will never receive messages from it unless the server admin adds Arachne to that channel's permissions.
+- **Loom UI fix (roadmap):** Dashboard channel picker (`/api/servers/:id/channels`) should include a `readable: boolean` flag per channel using `channel.permissionsFor(guild.members.me).has('ViewChannel')`. Loom shows all channels but marks unreadable ones with a warning icon so admins know to add Arachne to the channel permissions. MCP `list_channels` is fine — already filters by entity whitelist.
+- **Discovered:** 26 Feb 2026 during collaborative testing — `read_messages` returned empty queue despite Anne sending messages in a private channel where the bot wasn't listed.
+
+### Entity Identity & Presence — **Not started**
+- **Problem:** Webhook name cards in Discord are minimal (name + avatar only). No bio, banner, status, or "About Me" — that's a Discord API limitation for webhooks.
+- **Workarounds to explore:**
+  - **`introduce` tool enrichment** — post a rich embed with entity bio, avatar, personality summary, links. This is the entity's "business card" in-channel.
+  - **Loom public profile page** — web-based entity profile with full identity details (accessible via link in the introduce embed).
+  - **Entity embed footer** — optionally append a subtle footer/signature to webhook messages with a link to the entity's profile.
+- Decide which approach (or combination) gives entities enough presence without cluttering channels.
+
 ### MCP Tools Reference Page — **Stub**
 - Detailed documentation for all 32 MCP tools, grouped by category
 - For each tool: name, description, parameters, example usage, permission notes
@@ -88,11 +103,24 @@ Status: **in progress** — public pages (FAQ, Terms, Changelog, Guide) live wit
 ## Features (Backend)
 
 ### Trigger Words + Owner Notifications
-- Plan exists: `~/.claude/plans/clever-giggling-sifakis.md`
 - Configurable trigger words per entity
-- Owner DM notifications on @mention and trigger match
+- Owner DM notifications via Arachne bot
 - Wire up `blocked_channels` (currently dead code)
 - Status: **planned, not started**
+
+**Design decisions (26 Feb 2026):**
+
+| Notification type | Watched channels | Non-watched channels | Blocked channels |
+|-------------------|-----------------|---------------------|-----------------|
+| @mention | Queued + notify | **Notify only** (not queued) | **Notify only** (not queued) |
+| Trigger word | Queued + notify | No | No |
+
+- **@mention pierces all channel restrictions.** If someone mentions the entity anywhere the bot can see, the owner gets a DM — even if the entity isn't watching that channel or the channel is blocked. The message is NOT queued (entity stays deaf), but the owner is informed.
+- **Trigger words respect channel filtering.** Only fires within watched channels. If no watch list is set (all channels), triggers fire everywhere except blocked.
+- **Blocked channels** remain fully blocked for entity tools (read, respond, history) — only @mention notifications pass through.
+- **Loom UI** needs to make this distinction clear. Hover tooltip on each checkbox:
+  - **Notify on @mention:** "You'll be notified when someone mentions your entity in any channel on this server, even channels your entity doesn't watch."
+  - **Notify on trigger word:** "Only triggers in your entity's watched channels. Set watched channels above."
 
 ### (Add more as needed)
 

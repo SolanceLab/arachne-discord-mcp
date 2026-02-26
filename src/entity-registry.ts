@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { generateApiKey, generateSalt, hashApiKey, deriveEncryptionKey } from './crypto.js';
 import { keyStore } from './key-store.js';
 import { logger } from './logger.js';
-import type { Entity, EntityServer, ServerRequest, ServerSettings, ServerTemplate, OAuthAuthCode, OAuthAccessToken, OAuthRefreshToken, OAuthClient } from './types.js';
+import type { Entity, EntityServer, ServerRequest, ServerSettings, ServerTemplate, BugReport, BugReportMessage, OAuthAuthCode, OAuthAccessToken, OAuthRefreshToken, OAuthClient } from './types.js';
 
 export class EntityRegistry {
   private db: Database.Database;
@@ -206,6 +206,41 @@ export class EntityRegistry {
       );
     `);
 
+    // Bug reports table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS bug_reports (
+        id            TEXT PRIMARY KEY,
+        reporter_id   TEXT NOT NULL,
+        reporter_name TEXT,
+        entity_id     TEXT,
+        server_id     TEXT,
+        title         TEXT NOT NULL,
+        description   TEXT NOT NULL,
+        status        TEXT NOT NULL DEFAULT 'open',
+        created_at    TEXT DEFAULT (datetime('now')),
+        resolved_at   TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS bug_report_messages (
+        id          TEXT PRIMARY KEY,
+        report_id   TEXT NOT NULL REFERENCES bug_reports(id),
+        sender_id   TEXT NOT NULL,
+        sender_name TEXT,
+        is_operator INTEGER NOT NULL DEFAULT 0,
+        message     TEXT NOT NULL,
+        created_at  TEXT DEFAULT (datetime('now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_bug_report_messages_report
+        ON bug_report_messages(report_id);
+
+      CREATE TABLE IF NOT EXISTS bug_report_reads (
+        report_id TEXT NOT NULL,
+        user_id   TEXT NOT NULL,
+        last_read_at TEXT NOT NULL,
+        PRIMARY KEY (report_id, user_id)
+      );
+    `);
+
     logger.info('Entity registry initialized');
   }
 
@@ -353,13 +388,13 @@ export class EntityRegistry {
    * HOT PATH — called on every incoming message.
    * Find all active entities subscribed to a given server+channel.
    */
-  getEntitiesForChannel(serverId: string, channelId: string): Array<Entity & { channels: string; tools: string; blocked_channels: string }> {
+  getEntitiesForChannel(serverId: string, channelId: string): Array<Entity & { channels: string; tools: string; blocked_channels: string; watch_channels: string }> {
     const rows = this.db.prepare(`
-      SELECT e.*, es.channels, es.tools, es.blocked_channels
+      SELECT e.*, es.channels, es.tools, es.blocked_channels, es.watch_channels
       FROM entities e
       JOIN entity_servers es ON e.id = es.entity_id
       WHERE e.active = 1 AND es.server_id = ?
-    `).all(serverId) as Array<Entity & { channels: string; tools: string; blocked_channels: string }>;
+    `).all(serverId) as Array<Entity & { channels: string; tools: string; blocked_channels: string; watch_channels: string }>;
 
     // Filter: entity sees this channel if channels array is empty (all) or includes channelId
     return rows.filter(row => {
@@ -698,6 +733,88 @@ export class EntityRegistry {
 
   listBannedServers(): Array<{ server_id: string; server_name: string | null; banned_at: string }> {
     return this.db.prepare('SELECT * FROM banned_servers ORDER BY banned_at DESC').all() as Array<{ server_id: string; server_name: string | null; banned_at: string }>;
+  }
+
+  // --- Bug Reports ---
+
+  createBugReport(reporterId: string, reporterName: string | null, entityId: string | null, serverId: string | null, title: string, description: string): BugReport {
+    const id = uuidv4();
+    this.db.prepare(`
+      INSERT INTO bug_reports (id, reporter_id, reporter_name, entity_id, server_id, title, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(id, reporterId, reporterName, entityId, serverId, title, description);
+    logger.info(`Bug report created: ${id} by ${reporterName || reporterId}`);
+    return this.db.prepare('SELECT * FROM bug_reports WHERE id = ?').get(id) as BugReport;
+  }
+
+  getBugReportsByUser(reporterId: string): (BugReport & { unread_count: number })[] {
+    return this.db.prepare(`
+      SELECT br.*,
+        (SELECT COUNT(*) FROM bug_report_messages m
+         WHERE m.report_id = br.id
+         AND m.sender_id != ?
+         AND m.created_at > COALESCE(
+           (SELECT last_read_at FROM bug_report_reads WHERE report_id = br.id AND user_id = ?),
+           '1970-01-01'
+         )
+        ) as unread_count
+      FROM bug_reports br
+      WHERE br.reporter_id = ?
+      ORDER BY br.created_at DESC
+    `).all(reporterId, reporterId, reporterId) as (BugReport & { unread_count: number })[];
+  }
+
+  getAllBugReports(userId: string): (BugReport & { unread_count: number })[] {
+    return this.db.prepare(`
+      SELECT br.*,
+        (SELECT COUNT(*) FROM bug_report_messages m
+         WHERE m.report_id = br.id
+         AND m.sender_id != ?
+         AND m.created_at > COALESCE(
+           (SELECT last_read_at FROM bug_report_reads WHERE report_id = br.id AND user_id = ?),
+           '1970-01-01'
+         )
+        ) as unread_count
+      FROM bug_reports br
+      ORDER BY br.created_at DESC
+    `).all(userId, userId) as (BugReport & { unread_count: number })[];
+  }
+
+  updateBugReportStatus(id: string, status: 'open' | 'resolved'): boolean {
+    const resolvedAt = status === 'resolved' ? new Date().toISOString() : null;
+    const result = this.db.prepare(
+      'UPDATE bug_reports SET status = ?, resolved_at = ? WHERE id = ?'
+    ).run(status, resolvedAt, id);
+    return result.changes > 0;
+  }
+
+  getBugReport(id: string): BugReport | null {
+    return this.db.prepare('SELECT * FROM bug_reports WHERE id = ?').get(id) as BugReport | null;
+  }
+
+  // --- Bug Report Messages ---
+
+  addBugReportMessage(reportId: string, senderId: string, senderName: string | null, isOperator: boolean, message: string): BugReportMessage {
+    const id = uuidv4();
+    this.db.prepare(`
+      INSERT INTO bug_report_messages (id, report_id, sender_id, sender_name, is_operator, message)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(id, reportId, senderId, senderName, isOperator ? 1 : 0, message);
+    return this.db.prepare('SELECT * FROM bug_report_messages WHERE id = ?').get(id) as BugReportMessage;
+  }
+
+  getBugReportMessages(reportId: string): BugReportMessage[] {
+    return this.db.prepare(
+      'SELECT * FROM bug_report_messages WHERE report_id = ? ORDER BY created_at ASC'
+    ).all(reportId) as BugReportMessage[];
+  }
+
+  markBugReportRead(reportId: string, userId: string): void {
+    this.db.prepare(`
+      INSERT INTO bug_report_reads (report_id, user_id, last_read_at)
+      VALUES (?, ?, datetime('now'))
+      ON CONFLICT(report_id, user_id) DO UPDATE SET last_read_at = datetime('now')
+    `).run(reportId, userId);
   }
 
   close() {

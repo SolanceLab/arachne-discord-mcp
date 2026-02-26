@@ -9,6 +9,7 @@ export default function Layout() {
     { to: '/entities', label: 'My Entities', show: true },
     { to: '/servers', label: 'My Servers', show: (user?.admin_servers.length ?? 0) > 0 },
     { to: '/tools', label: 'Tools', show: true },
+    { to: '/bug-reports', label: 'Bug Reports', show: true },
     { to: '/operator', label: 'Operator', show: user?.is_operator },
   ];
 

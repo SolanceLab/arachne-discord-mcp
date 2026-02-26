@@ -81,6 +81,8 @@ export default function MyEntities() {
   // Server detail panel
   const [expandedEntity, setExpandedEntity] = useState<string | null>(null);
   const [serverEdits, setServerEdits] = useState<Record<string, { watch: string; blocked: string }>>({});
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [savedServer, setSavedServer] = useState<string | null>(null);
 
   const fetchEntities = async () => {
     try {
@@ -167,6 +169,7 @@ export default function MyEntities() {
   };
 
   const saveEdit = async (entityId: string) => {
+    setSavingEdit(true);
     const triggers = editTriggers.split(',').map(t => t.trim()).filter(Boolean);
     await apiFetch(`/api/entities/${entityId}`, {
       method: 'PATCH',
@@ -179,6 +182,7 @@ export default function MyEntities() {
         notify_on_trigger: editNotifyTrigger,
       }),
     });
+    setSavingEdit(false);
     setEditing(null);
     fetchEntities();
   };
@@ -229,12 +233,15 @@ export default function MyEntities() {
   const saveServerConfig = async (entityId: string, serverId: string) => {
     const edit = serverEdits[serverId];
     if (!edit) return;
+    setSavedServer(serverId + '-saving');
     const watch = edit.watch.split(',').map(c => c.trim()).filter(Boolean);
     const blocked = edit.blocked.split(',').map(c => c.trim()).filter(Boolean);
     await apiFetch(`/api/entities/${entityId}/servers/${serverId}`, {
       method: 'PATCH',
       body: JSON.stringify({ watch_channels: watch, blocked_channels: blocked }),
     });
+    setSavedServer(serverId);
+    setTimeout(() => setSavedServer(null), 2000);
     fetchEntities();
   };
 
@@ -407,9 +414,10 @@ export default function MyEntities() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => saveEdit(entity.id)}
-                        className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm rounded transition-colors"
+                        disabled={savingEdit}
+                        className="px-3 py-1.5 bg-accent hover:bg-accent-hover disabled:opacity-40 text-white text-sm rounded transition-colors"
                       >
-                        Save
+                        {savingEdit ? 'Saving...' : 'Save'}
                       </button>
                       <button
                         onClick={() => setEditing(null)}
@@ -646,9 +654,14 @@ export default function MyEntities() {
                               </div>
                               <button
                                 onClick={() => saveServerConfig(entity.id, server.server_id)}
-                                className="px-3 py-1 text-xs bg-accent hover:bg-accent-hover text-white rounded transition-colors"
+                                disabled={savedServer === server.server_id + '-saving'}
+                                className={`px-3 py-1 text-xs rounded transition-colors ${
+                                  savedServer === server.server_id
+                                    ? 'bg-success/20 text-success border border-success/30'
+                                    : 'bg-accent hover:bg-accent-hover text-white disabled:opacity-40'
+                                }`}
                               >
-                                Save
+                                {savedServer === server.server_id + '-saving' ? 'Saving...' : savedServer === server.server_id ? 'Saved' : 'Save'}
                               </button>
                             </div>
                           </div>

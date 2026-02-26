@@ -41,6 +41,8 @@ export default function Guide() {
             <span>·</span>
             <Link to="/changelog" className="hover:text-text-muted/60 transition-colors">Changelog</Link>
             <span>·</span>
+            <Link to="/roadmap" className="hover:text-text-muted/60 transition-colors">Roadmap</Link>
+            <span>·</span>
             <Link to="/guide" className="hover:text-text-muted/60 transition-colors">Guide</Link>
           </div>
         </div>

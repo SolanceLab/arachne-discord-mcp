@@ -43,6 +43,7 @@ export interface EntityWithServers extends Entity {
 export interface QueuedMessage {
   messageId: string;
   channelId: string;
+  channelName: string;
   serverId: string;
   authorId: string;
   authorName: string;
@@ -57,6 +58,7 @@ export interface QueuedMessage {
 export interface ReadableMessage {
   id: string;
   channel_id: string;
+  channel_name: string;
   server_id: string;
   author_id: string;
   author_name: string;
@@ -120,6 +122,29 @@ export interface ServerTemplate {
   name: string;
   channels: string;  // JSON array of channel IDs (empty = all)
   tools: string;     // JSON array of tool names (empty = all)
+  created_at: string;
+}
+
+export interface BugReport {
+  id: string;
+  reporter_id: string;
+  reporter_name: string | null;
+  entity_id: string | null;
+  server_id: string | null;
+  title: string;
+  description: string;
+  status: 'open' | 'resolved';
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface BugReportMessage {
+  id: string;
+  report_id: string;
+  sender_id: string;
+  sender_name: string | null;
+  is_operator: number;
+  message: string;
   created_at: string;
 }
 

@@ -126,6 +126,37 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
     }
   );
 
+  // --- remove_reaction ---
+  server.tool(
+    'remove_reaction',
+    'Remove the bot\'s reaction from a message.',
+    {
+      channel_id: z.string().describe('The channel ID where the message is'),
+      message_id: z.string().describe('The message ID to remove the reaction from'),
+      emoji: z.string().describe('The emoji to remove (e.g., "👍" or custom emoji name)'),
+    },
+    async ({ channel_id, message_id, emoji }) => {
+      if (!canAccessChannel(channel_id)) {
+        return { content: [{ type: 'text' as const, text: 'Error: You do not have access to this channel.' }] };
+      }
+      try {
+        const channel = await discordClient.channels.fetch(channel_id);
+        if (!channel || !('messages' in channel)) {
+          return { content: [{ type: 'text' as const, text: 'Error: Channel not found or not a text channel.' }] };
+        }
+        const message = await (channel as any).messages.fetch(message_id);
+        await message.reactions.cache.get(emoji)?.users.remove(discordClient.user!.id);
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ success: true }) }],
+        };
+      } catch (err) {
+        return {
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
+        };
+      }
+    }
+  );
+
   // --- list_channels ---
   server.tool(
     'list_channels',
@@ -133,7 +164,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
     {},
     async () => {
       try {
-        const result: Array<{ id: string; name: string; type: string; server_id: string; server_name: string; category?: string }> = [];
+        const result: Array<{ id: string; name: string; type: string; server_id: string; server_name: string; category?: string; category_id?: string }> = [];
 
         for (const es of entityServers) {
           const guild = discordClient.guilds.cache.get(es.server_id);
@@ -155,6 +186,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
               server_id: es.server_id,
               server_name: guild.name,
               category: channel.parent?.name || undefined,
+              category_id: channel.parent?.id || undefined,
             });
           }
         }
@@ -375,7 +407,8 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         }
 
         const user = await discordClient.users.fetch(user_id);
-        const msg = await user.send(content);
+        const dmContent = `**Message from ${entity.name}:**\n${content}`;
+        const msg = await user.send(dmContent);
         return {
           content: [{ type: 'text' as const, text: JSON.stringify({ success: true, message_id: msg.id }) }],
         };
@@ -698,7 +731,7 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         }
         const msg = await (channel as any).send({
           poll: {
-            question: { text: question },
+            question: { text: `Poll by ${entity.name}: ${question}` },
             answers: options.map(o => ({
               text: o.text,
               emoji: o.emoji ? { name: o.emoji } : undefined,
@@ -807,6 +840,36 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
     }
   );
 
+  // --- unpin_message ---
+  server.tool(
+    'unpin_message',
+    'Unpin a message in a Discord channel.',
+    {
+      channel_id: z.string().describe('The channel ID'),
+      message_id: z.string().describe('The message ID to unpin'),
+    },
+    async ({ channel_id, message_id }) => {
+      if (!canAccessChannel(channel_id)) {
+        return { content: [{ type: 'text' as const, text: 'Error: You do not have access to this channel.' }] };
+      }
+      try {
+        const channel = await discordClient.channels.fetch(channel_id);
+        if (!channel || !('messages' in channel)) {
+          return { content: [{ type: 'text' as const, text: 'Error: Channel not found or not a text channel.' }] };
+        }
+        const message = await (channel as any).messages.fetch(message_id);
+        await message.unpin();
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ success: true, message_id, unpinned: true }) }],
+        };
+      } catch (err) {
+        return {
+          content: [{ type: 'text' as const, text: `Error: ${friendlyError(err)}` }],
+        };
+      }
+    }
+  );
+
   // --- Threads & Forums ---
 
   // --- create_thread ---
@@ -868,9 +931,10 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
         if (!channel || !('threads' in channel)) {
           return { content: [{ type: 'text' as const, text: 'Error: Channel not found or not a forum channel.' }] };
         }
+        const attributedContent = `**Post by ${entity.name}:**\n${content}`;
         const threadOptions: any = {
           name: title,
-          message: { content },
+          message: { content: attributedContent },
         };
         if (tags && tags.length > 0) {
           threadOptions.appliedTags = tags;

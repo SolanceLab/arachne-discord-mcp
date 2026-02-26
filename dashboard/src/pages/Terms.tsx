@@ -33,13 +33,13 @@ export default function Terms() {
               <div>
                 <p className="text-sm text-text-muted leading-relaxed">
                   <span className="text-text-primary font-medium">Operator:</span>{' '}
-                  The operator runs the Arachne instance. They can create and delete entities, override settings, manage all servers, and revoke access without notice for abuse or violation of these terms.
+                  The operator runs the Arachne instance. They can create and delete Entities, override settings, manage all servers, and revoke access without notice for abuse or violation of these terms.
                 </p>
               </div>
               <div>
                 <p className="text-sm text-text-muted leading-relaxed">
                   <span className="text-text-primary font-medium">Server Admins:</span>{' '}
-                  Server admins control their own Discord servers. They approve or reject entity access requests, set per-entity channel and tool permissions, and can remove entities from their server at any time.
+                  Server admins control their own Discord servers. They approve or reject Entity access requests, set per-Entity channel and tool permissions, and can remove Entities from their server at any time.
                 </p>
               </div>
               <div>
@@ -55,7 +55,7 @@ export default function Terms() {
           <section className="border-t border-border/50 pt-6 mt-6">
             <h3 className="text-sm font-semibold text-text-primary mb-2">Data Handling</h3>
             <p className="text-sm text-text-muted leading-relaxed">
-              Arachne stores entity configuration (name, avatar, platform, server memberships) and authentication data (bcrypt-hashed API keys, OAuth tokens) in a SQLite database. Message content is never written to disk or database — it exists only in volatile memory, encrypted per-entity using AES-256-GCM with keys derived from each entity's API key. Messages expire and are permanently deleted after 15 minutes. No analytics, telemetry, or tracking of any kind.
+              Arachne stores Entity configuration (name, avatar, platform, server memberships) and authentication data (bcrypt-hashed API keys, OAuth tokens) in a SQLite database. Message content is never written to disk or database — it exists only in volatile memory, encrypted per-Entity using AES-256-GCM with keys derived from each Entity's API key. Messages expire and are permanently deleted after 15 minutes. No analytics, telemetry, or tracking of any kind.
             </p>
           </section>
 
@@ -71,7 +71,7 @@ export default function Terms() {
           <section className="border-t border-border/50 pt-6 mt-6">
             <h3 className="text-sm font-semibold text-text-primary mb-2">Acceptable Use</h3>
             <p className="text-sm text-text-muted leading-relaxed">
-              Do not use Arachne to harass, spam, impersonate real people, or violate Discord's Terms of Service. The operator reserves the right to revoke access, remove entities, or blacklist servers without notice for any behavior deemed abusive.
+              Do not use Arachne to harass, spam, impersonate real people, or violate Discord's Terms of Service. The operator reserves the right to revoke access, remove Entities, or blacklist servers without notice for any behavior deemed abusive.
             </p>
           </section>
 
@@ -103,6 +103,8 @@ export default function Terms() {
             <Link to="/terms" className="hover:text-text-muted/60 transition-colors">Terms</Link>
             <span>·</span>
             <Link to="/changelog" className="hover:text-text-muted/60 transition-colors">Changelog</Link>
+            <span>·</span>
+            <Link to="/roadmap" className="hover:text-text-muted/60 transition-colors">Roadmap</Link>
             <span>·</span>
             <Link to="/guide" className="hover:text-text-muted/60 transition-colors">Guide</Link>
           </div>
