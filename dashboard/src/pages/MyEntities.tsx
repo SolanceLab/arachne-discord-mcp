@@ -724,26 +724,32 @@ export default function MyEntities() {
                         <li><span className="text-text-primary">Linux:</span> <code className="text-accent">~/.config/Claude/claude_desktop_config.json</code></li>
                       </ul>
                     </li>
-                    <li>Add this block inside <code className="text-accent">"mcpServers"</code>:</li>
+                    <li>Replace the file contents with this (or save as new file):</li>
                   </ol>
                   <div className="relative">
-                    <pre className="text-[11px] text-text-primary bg-bg-deep px-3 py-2.5 rounded border border-border whitespace-pre-wrap break-all">{`"${serverName}": {
-  "command": "npx",
-  "args": [
-    "-y",
-    "mcp-remote",
-    "${mcpUrl}",
-    "--header",
-    "Authorization:Bearer YOUR_API_KEY"
-  ]
+                    <pre className="text-[11px] text-text-primary bg-bg-deep px-3 py-2.5 rounded border border-border whitespace-pre-wrap break-all">{`{
+  "mcpServers": {
+    "${serverName}": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "${mcpUrl}",
+        "--header",
+        "Authorization:Bearer YOUR_API_KEY"
+      ]
+    }
+  }
 }`}</pre>
                     <button
                       onClick={() => copyToClipboard(JSON.stringify({
-                        [serverName]: {
-                          command: 'npx',
-                          args: ['-y', 'mcp-remote', mcpUrl, '--header', 'Authorization:Bearer YOUR_API_KEY'],
+                        mcpServers: {
+                          [serverName]: {
+                            command: 'npx',
+                            args: ['-y', 'mcp-remote', mcpUrl, '--header', 'Authorization:Bearer YOUR_API_KEY'],
+                          },
                         },
-                      }, null, 2).slice(2, -2).trim(), `config-${entity.id}`)}
+                      }, null, 2), `config-${entity.id}`)}
                       className={`absolute top-1.5 right-1.5 px-2 py-0.5 text-[10px] border border-border rounded transition-colors ${copiedField === `config-${entity.id}` ? 'bg-success/20 text-success border-success/30' : 'bg-bg-surface hover:bg-border'}`}
                     >
                       {copiedField === `config-${entity.id}` ? 'Copied' : 'Copy'}
