@@ -79,6 +79,10 @@ export default function MyEntities() {
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  // Inline confirmations (replacing browser confirm() which Chrome suppresses)
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+  const [confirmingRegen, setConfirmingRegen] = useState<string | null>(null);
+
   // Server detail panel
   const [expandedEntity, setExpandedEntity] = useState<string | null>(null);
   const [serverEdits, setServerEdits] = useState<Record<string, { watch: string; blocked: string }>>({});
@@ -152,20 +156,26 @@ export default function MyEntities() {
   };
 
   const handleRegenKey = async (entityId: string) => {
-    if (!confirm('Regenerate API key? The current key will stop working immediately.')) return;
-    const data = await apiFetch<{ api_key: string }>(`/api/entities/${entityId}/regenerate-key`, {
-      method: 'POST',
-    });
-    setApiKey(data.api_key);
+    try {
+      const data = await apiFetch<{ api_key: string }>(`/api/entities/${entityId}/regenerate-key`, {
+        method: 'POST',
+      });
+      setApiKey(data.api_key);
+    } catch (err) {
+      console.error('Regen key failed:', err);
+    } finally {
+      setConfirmingRegen(null);
+    }
   };
 
-  const handleDelete = async (entityId: string, entityName: string) => {
-    if (!confirm(`Permanently delete ${entityName}? This removes the entity from all servers and cannot be undone.`)) return;
+  const handleDelete = async (entityId: string) => {
     try {
       await apiFetch(`/api/entities/${entityId}`, { method: 'DELETE' });
       setEntities(prev => prev.filter(e => e.id !== entityId));
     } catch (err) {
-      alert(`Failed to delete: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      console.error('Delete failed:', err);
+    } finally {
+      setConfirmingDelete(null);
     }
   };
 
@@ -500,18 +510,52 @@ export default function MyEntities() {
                     >
                       Join Server
                     </button>
-                    <button
-                      onClick={() => handleRegenKey(entity.id)}
-                      className="px-2.5 py-1 text-xs bg-bg-surface hover:bg-border text-warning rounded transition-colors"
-                    >
-                      Regen Key
-                    </button>
-                    <button
-                      onClick={() => handleDelete(entity.id, entity.name)}
-                      className="px-2.5 py-1 text-xs bg-bg-surface hover:bg-red-900/30 text-red-400 rounded transition-colors"
-                    >
-                      Delete
-                    </button>
+                    {confirmingRegen === entity.id ? (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleRegenKey(entity.id)}
+                          className="px-2.5 py-1 text-xs bg-warning/20 hover:bg-warning/30 text-warning rounded transition-colors"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setConfirmingRegen(null)}
+                          className="px-2.5 py-1 text-xs bg-bg-surface hover:bg-border text-text-muted rounded transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmingRegen(entity.id)}
+                        className="px-2.5 py-1 text-xs bg-bg-surface hover:bg-border text-warning rounded transition-colors"
+                      >
+                        Regen Key
+                      </button>
+                    )}
+                    {confirmingDelete === entity.id ? (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleDelete(entity.id)}
+                          className="px-2.5 py-1 text-xs bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded transition-colors"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setConfirmingDelete(null)}
+                          className="px-2.5 py-1 text-xs bg-bg-surface hover:bg-border text-text-muted rounded transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmingDelete(entity.id)}
+                        className="px-2.5 py-1 text-xs bg-bg-surface hover:bg-red-900/30 text-red-400 rounded transition-colors"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
 
                   {/* Server request picker */}
