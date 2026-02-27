@@ -161,8 +161,12 @@ export default function MyEntities() {
 
   const handleDelete = async (entityId: string, entityName: string) => {
     if (!confirm(`Permanently delete ${entityName}? This removes the entity from all servers and cannot be undone.`)) return;
-    await apiFetch(`/api/entities/${entityId}`, { method: 'DELETE' });
-    setEntities(prev => prev.filter(e => e.id !== entityId));
+    try {
+      await apiFetch(`/api/entities/${entityId}`, { method: 'DELETE' });
+      setEntities(prev => prev.filter(e => e.id !== entityId));
+    } catch (err) {
+      alert(`Failed to delete: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
   };
 
   const startEdit = (entity: Entity) => {
