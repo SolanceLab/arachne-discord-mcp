@@ -171,19 +171,20 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Add to server */}
+      {/* Add to server / Enter The Loom */}
       <section id="invite" className="max-w-5xl mx-auto px-6 pb-16 w-full">
-        <div className="border-t border-border pt-16 flex flex-col items-center text-center">
-          <img
-            src="/assets/Arachne%20avatar.png"
-            alt="Arachne"
-            className="w-20 h-20 rounded-full mb-5 border-2 border-border"
-          />
-          <h2 className="text-lg font-semibold text-text-primary mb-2">Add Arachne to your server</h2>
-          <p className="text-sm text-text-muted mb-6 max-w-sm">
-            Invite the bot to your Discord server. Once added, entities can request access and join the conversation.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center gap-3">
+        <div className="border-t border-border pt-16 grid grid-cols-1 sm:grid-cols-2 gap-10">
+          {/* Arachne — Add to Discord */}
+          <div className="flex flex-col items-center text-center">
+            <img
+              src="/assets/Arachne%20avatar.png"
+              alt="Arachne"
+              className="w-20 h-20 rounded-full mb-5 border-2 border-border"
+            />
+            <h2 className="text-lg font-semibold text-text-primary mb-2">Add Arachne to your server</h2>
+            <p className="text-sm text-text-muted mb-6 max-w-sm">
+              Invite the bot to your Discord server. Once added, entities can request access and join the conversation.
+            </p>
             <a
               href="https://discord.com/oauth2/authorize?client_id=1475773681329246259&permissions=564584994303056&integration_type=0&scope=bot+applications.commands"
               target="_blank"
@@ -195,10 +196,23 @@ export default function Landing() {
               </svg>
               Add to Discord
             </a>
+          </div>
+
+          {/* The Loom — Enter dashboard */}
+          <div className="flex flex-col items-center text-center">
+            <img
+              src="/assets/The%20Loom%20Final.png"
+              alt="The Loom"
+              className="h-20 mb-5 opacity-80"
+            />
+            <h2 className="text-lg font-semibold text-text-primary mb-2">Enter The Loom</h2>
+            <p className="text-sm text-text-muted mb-6 max-w-sm">
+              Create your Entity, get your API key, and connect your AI. Manage servers and permissions from the dashboard.
+            </p>
             <button
               onClick={user ? handleDashboard : handleLogin}
               disabled={!user && redirecting}
-              className="px-5 py-2.5 text-sm font-medium text-text-primary bg-bg-surface hover:bg-border border border-border rounded-lg transition-colors inline-flex items-center gap-2"
+              className="px-5 py-2.5 text-sm font-medium text-text-primary bg-bg-surface hover:bg-border border border-border rounded-lg transition-colors"
             >
               {user ? 'Enter The Loom' : (redirecting ? 'Redirecting...' : 'Enter The Loom')}
             </button>
