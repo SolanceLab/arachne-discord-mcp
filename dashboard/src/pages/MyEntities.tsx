@@ -713,6 +713,68 @@ export default function MyEntities() {
               </div>
 
               <div className="px-5 py-4 space-y-5">
+                {/* MCP Endpoint */}
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">MCP Endpoint</label>
+                  <div className="flex items-center gap-1.5">
+                    <code className="text-xs text-accent bg-bg-deep px-2.5 py-1.5 rounded border border-border flex-1 break-all">
+                      {mcpUrl}
+                    </code>
+                    <button
+                      onClick={() => copyToClipboard(mcpUrl, `endpoint-${entity.id}`)}
+                      className={`px-2.5 py-1.5 text-xs border border-border rounded transition-colors shrink-0 ${copiedField === `endpoint-${entity.id}` ? 'bg-success/20 text-success border-success/30' : 'bg-bg-deep hover:bg-border'}`}
+                    >
+                      {copiedField === `endpoint-${entity.id}` ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-text-muted mt-1.5">Used by cloud platforms below — paste this URL when adding a connector.</p>
+                </div>
+
+                {/* Claude.ai */}
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">Claude.ai</label>
+                  <ol className="text-xs text-text-muted space-y-1 list-decimal list-inside">
+                    <li>Go to <span className="text-text-primary">Settings &gt; Connectors &gt; Add connector</span></li>
+                    <li>Paste your MCP endpoint URL</li>
+                    <li>OAuth is auto-discovered — no API key needed</li>
+                  </ol>
+                </div>
+
+                {/* ChatGPT */}
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">ChatGPT</label>
+                  <ol className="text-xs text-text-muted space-y-1 list-decimal list-inside">
+                    <li>Go to <span className="text-text-primary">Settings &gt; Apps &gt; Advanced settings &gt; Create app</span></li>
+                    <li>Set Authentication to <span className="text-text-primary">OAuth</span>, paste your MCP endpoint URL</li>
+                    <li>Leave OAuth Client ID and Secret blank — auto-discovered</li>
+                    <li>Requires <span className="text-text-primary">Developer Mode</span> and a paid tier (Plus, Pro, Business, Enterprise, or Edu)</li>
+                  </ol>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-border" />
+
+                {/* Claude Code */}
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">Claude Code</label>
+                  <p className="text-xs text-text-muted mb-2">Run this command in your terminal:</p>
+                  <div className="relative">
+                    <pre className="text-[11px] text-text-primary bg-bg-deep px-3 py-2.5 rounded border border-border whitespace-pre-wrap break-all">{`claude mcp add --transport http ${serverName} ${mcpUrl} --header "Authorization: Bearer YOUR_API_KEY"`}</pre>
+                    <button
+                      onClick={() => copyToClipboard(`claude mcp add --transport http ${serverName} ${mcpUrl} --header "Authorization: Bearer YOUR_API_KEY"`, `claude-code-${entity.id}`)}
+                      className={`absolute top-1.5 right-1.5 px-2 py-0.5 text-[10px] border border-border rounded transition-colors ${copiedField === `claude-code-${entity.id}` ? 'bg-success/20 text-success border-success/30' : 'bg-bg-surface hover:bg-border'}`}
+                    >
+                      {copiedField === `claude-code-${entity.id}` ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-text-muted mt-1.5">
+                    Replace <code className="text-warning">YOUR_API_KEY</code> with your entity's API key. Restart Claude Code after adding.
+                  </p>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-border" />
+
                 {/* Claude Desktop */}
                 <div>
                   <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">Claude Desktop</label>
@@ -761,68 +823,6 @@ export default function MyEntities() {
                   <p className="text-[10px] text-text-muted mt-1">
                     Claude Desktop won't start? <Link to="/config-doctor" onClick={() => setConnectingFor(null)} className="text-accent hover:underline">Check your config</Link>
                   </p>
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-border" />
-
-                {/* Claude Code */}
-                <div>
-                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">Claude Code</label>
-                  <p className="text-xs text-text-muted mb-2">Run this command in your terminal:</p>
-                  <div className="relative">
-                    <pre className="text-[11px] text-text-primary bg-bg-deep px-3 py-2.5 rounded border border-border whitespace-pre-wrap break-all">{`claude mcp add --transport http ${serverName} ${mcpUrl} --header "Authorization: Bearer YOUR_API_KEY"`}</pre>
-                    <button
-                      onClick={() => copyToClipboard(`claude mcp add --transport http ${serverName} ${mcpUrl} --header "Authorization: Bearer YOUR_API_KEY"`, `claude-code-${entity.id}`)}
-                      className={`absolute top-1.5 right-1.5 px-2 py-0.5 text-[10px] border border-border rounded transition-colors ${copiedField === `claude-code-${entity.id}` ? 'bg-success/20 text-success border-success/30' : 'bg-bg-surface hover:bg-border'}`}
-                    >
-                      {copiedField === `claude-code-${entity.id}` ? 'Copied' : 'Copy'}
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-text-muted mt-1.5">
-                    Replace <code className="text-warning">YOUR_API_KEY</code> with your entity's API key. Restart Claude Code after adding.
-                  </p>
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-border" />
-
-                {/* MCP Endpoint */}
-                <div>
-                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">MCP Endpoint</label>
-                  <div className="flex items-center gap-1.5">
-                    <code className="text-xs text-accent bg-bg-deep px-2.5 py-1.5 rounded border border-border flex-1 break-all">
-                      {mcpUrl}
-                    </code>
-                    <button
-                      onClick={() => copyToClipboard(mcpUrl, `endpoint-${entity.id}`)}
-                      className={`px-2.5 py-1.5 text-xs border border-border rounded transition-colors shrink-0 ${copiedField === `endpoint-${entity.id}` ? 'bg-success/20 text-success border-success/30' : 'bg-bg-deep hover:bg-border'}`}
-                    >
-                      {copiedField === `endpoint-${entity.id}` ? 'Copied' : 'Copy'}
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-text-muted mt-1.5">Used by cloud platforms below — paste this URL when adding a connector.</p>
-                </div>
-
-                {/* Claude.ai */}
-                <div>
-                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">Claude.ai</label>
-                  <ol className="text-xs text-text-muted space-y-1 list-decimal list-inside">
-                    <li>Go to <span className="text-text-primary">Settings &gt; Connectors &gt; Add connector</span></li>
-                    <li>Paste your MCP endpoint URL</li>
-                    <li>OAuth is auto-discovered — no API key needed</li>
-                  </ol>
-                </div>
-
-                {/* ChatGPT */}
-                <div>
-                  <label className="text-xs uppercase tracking-wider text-text-muted font-medium block mb-1.5">ChatGPT</label>
-                  <ol className="text-xs text-text-muted space-y-1 list-decimal list-inside">
-                    <li>Go to <span className="text-text-primary">Settings &gt; Apps &gt; Advanced settings &gt; Create app</span></li>
-                    <li>Set Authentication to <span className="text-text-primary">OAuth</span>, paste your MCP endpoint URL</li>
-                    <li>Leave OAuth Client ID and Secret blank — auto-discovered</li>
-                    <li>Requires <span className="text-text-primary">Developer Mode</span> and a paid tier (Plus, Pro, Business, Enterprise, or Edu)</li>
-                  </ol>
                 </div>
 
                 {/* Footer note */}
