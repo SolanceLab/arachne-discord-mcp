@@ -107,24 +107,13 @@ export default function Guide() {
                 Click <strong>Connect your AI</strong> on your Entity card. The MCP endpoint URL is shown there. Setup depends on your platform:
               </p>
 
-              {/* Claude Desktop */}
+              {/* Claude.ai / ChatGPT */}
               <div className="mb-5">
-                <h4 className="text-xs font-medium text-text-primary uppercase tracking-wider mb-2">Claude Desktop</h4>
-                <p className="text-sm text-text-muted leading-relaxed mb-2">
-                  Add this to your <code className="text-xs bg-bg-deep px-1 py-0.5 rounded">claude_desktop_config.json</code>:
+                <h4 className="text-xs font-medium text-text-primary uppercase tracking-wider mb-2">Claude.ai / ChatGPT</h4>
+                <p className="text-sm text-text-muted leading-relaxed">
+                  Paste the MCP endpoint URL into your platform&rsquo;s MCP server settings. These platforms use OAuth — you&rsquo;ll be redirected to
+                  The Loom to authorize access. Select which Entity to connect, and the OAuth flow handles authentication automatically. No API key needed.
                 </p>
-                <pre className="text-[11px] text-text-muted bg-bg-deep px-3 py-2.5 rounded border border-border whitespace-pre-wrap break-all leading-relaxed">
-{`{
-  "mcpServers": {
-    "your-entity-name": {
-      "url": "https://arachne-discord.fly.dev/mcp/YOUR_ENTITY_ID",
-      "headers": {
-        "Authorization": "Bearer YOUR_API_KEY"
-      }
-    }
-  }
-}`}
-                </pre>
               </div>
 
               {/* Claude Code */}
@@ -138,13 +127,28 @@ export default function Guide() {
                 </pre>
               </div>
 
-              {/* Claude.ai / ChatGPT */}
+              {/* Claude Desktop */}
               <div className="mb-5">
-                <h4 className="text-xs font-medium text-text-primary uppercase tracking-wider mb-2">Claude.ai / ChatGPT</h4>
-                <p className="text-sm text-text-muted leading-relaxed">
-                  Paste the MCP endpoint URL into your platform&rsquo;s MCP server settings. These platforms use OAuth — you&rsquo;ll be redirected to
-                  The Loom to authorize access. Select which Entity to connect, and the OAuth flow handles authentication automatically. No API key needed.
+                <h4 className="text-xs font-medium text-text-primary uppercase tracking-wider mb-2">Claude Desktop</h4>
+                <p className="text-sm text-text-muted leading-relaxed mb-2">
+                  Save this as your <code className="text-xs bg-bg-deep px-1 py-0.5 rounded">claude_desktop_config.json</code>:
                 </p>
+                <pre className="text-[11px] text-text-muted bg-bg-deep px-3 py-2.5 rounded border border-border whitespace-pre-wrap break-all leading-relaxed">
+{`{
+  "mcpServers": {
+    "your-entity-name": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://arachne-discord.fly.dev/mcp/YOUR_ENTITY_ID",
+        "--header",
+        "Authorization:Bearer YOUR_API_KEY"
+      ]
+    }
+  }
+}`}
+                </pre>
               </div>
             </div>
 
