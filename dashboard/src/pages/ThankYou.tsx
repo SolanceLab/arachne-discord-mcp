@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 
-export default function Guide() {
+export default function ThankYou() {
   return (
     <div className="min-h-screen flex flex-col bg-bg-deep">
       <header className="px-6 py-4 flex items-center justify-between">
@@ -12,7 +12,7 @@ export default function Guide() {
 
       <main className="flex-1 max-w-2xl mx-auto w-full px-6 py-12">
         <h1 className="text-2xl font-semibold text-text-primary text-center mb-12">
-          Guide
+          Acknowledgements
         </h1>
         <p className="text-sm text-text-muted text-center">
           Customize this page for your deployment.

@@ -13,6 +13,8 @@ interface ServerEntity {
   owner_name: string | null;
   channels: string[];
   tools: string[];
+  template_id: string | null;
+  dedicated_channels: string[];
   watch_channels: string[];
   blocked_channels: string[];
   role_id: string | null;
@@ -82,8 +84,19 @@ export default function MyServers() {
   const [configuringId, setConfiguringId] = useState<string | null>(null);
   const [configChannels, setConfigChannels] = useState<string[]>([]);
   const [configTools, setConfigTools] = useState<string[]>([]);
+  const [configDedicatedChannels, setConfigDedicatedChannels] = useState('');
+  const [configTemplateId, setConfigTemplateId] = useState<string | null>(null);
   const [savingConfig, setSavingConfig] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
+
+  // Approval flow template tracking
+  const [approveTemplateId, setApproveTemplateId] = useState<string | null>(null);
+  const [approveDedicatedChannels, setApproveDedicatedChannels] = useState('');
+
+  // Inline confirmations (click-twice, replaces browser confirm())
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
 
   const servers = user?.admin_servers || [];
 
@@ -124,17 +137,37 @@ export default function MyServers() {
     setRequests(r);
   };
 
-  const handleRemove = async (entityId: string, entityName: string) => {
-    if (!confirm(`Remove ${entityName} from this server?`)) return;
-    await apiFetch(`/api/servers/${selectedServer}/entities/${entityId}`, {
-      method: 'DELETE',
-    });
-    setEntities(prev => prev.filter(e => e.id !== entityId));
+  const handleRemove = async (entityId: string) => {
+    if (removingId !== entityId) {
+      setRemovingId(entityId);
+      return;
+    }
+    setRemovingId(null);
+    try {
+      await apiFetch(`/api/servers/${selectedServer}/entities/${entityId}`, {
+        method: 'DELETE',
+      });
+      setEntities(prev => prev.filter(e => e.id !== entityId));
+    } catch (err) {
+      window.alert(`Failed to remove: ${err instanceof Error ? err.message : String(err)}`);
+    }
   };
 
   const applyTemplate = (template: ServerTemplateData) => {
     setApproveChannels(template.channels);
     setApproveTools(template.tools);
+    setApproveTemplateId(template.id);
+  };
+
+  const applyTemplateToConfig = (template: ServerTemplateData) => {
+    // Parse current dedicated channels
+    const dedicated = configDedicatedChannels
+      .split(',').map(s => s.trim()).filter(Boolean);
+    // Merge template channels + dedicated
+    const merged = [...new Set([...template.channels, ...dedicated])];
+    setConfigChannels(merged);
+    setConfigTools(template.tools);
+    setConfigTemplateId(template.id);
   };
 
   const saveTemplate = async () => {
@@ -171,22 +204,37 @@ export default function MyServers() {
   };
 
   const deleteTemplate = async (templateId: string) => {
-    if (!selectedServer || !confirm('Delete this template?')) return;
-    await apiFetch(`/api/servers/${selectedServer}/templates/${templateId}`, { method: 'DELETE' });
-    setTemplates(prev => prev.filter(t => t.id !== templateId));
+    if (!selectedServer) return;
+    if (deletingTemplateId !== templateId) {
+      setDeletingTemplateId(templateId);
+      return;
+    }
+    setDeletingTemplateId(null);
+    try {
+      await apiFetch(`/api/servers/${selectedServer}/templates/${templateId}`, { method: 'DELETE' });
+      setTemplates(prev => prev.filter(t => t.id !== templateId));
+    } catch (err) {
+      window.alert(`Failed to delete: ${err instanceof Error ? err.message : String(err)}`);
+    }
   };
 
   const handleApprove = async (requestId: string) => {
+    const dedicatedArr = approveDedicatedChannels
+      .split(',').map(s => s.trim()).filter(Boolean);
     await apiFetch(`/api/servers/${selectedServer}/requests/${requestId}/approve`, {
       method: 'POST',
       body: JSON.stringify({
         channels: approveChannels,
         tools: approveTools,
+        template_id: approveTemplateId,
+        dedicated_channels: dedicatedArr,
       }),
     });
     setApprovingId(null);
     setApproveChannels([]);
     setApproveTools([]);
+    setApproveTemplateId(null);
+    setApproveDedicatedChannels('');
     await refreshData();
   };
 
@@ -200,11 +248,19 @@ export default function MyServers() {
   };
 
   const handleReject = async (requestId: string) => {
-    if (!confirm('Reject this request?')) return;
-    await apiFetch(`/api/servers/${selectedServer}/requests/${requestId}/reject`, {
-      method: 'POST',
-    });
-    setRequests(prev => prev.filter(r => r.id !== requestId));
+    if (rejectingId !== requestId) {
+      setRejectingId(requestId);
+      return;
+    }
+    setRejectingId(null);
+    try {
+      await apiFetch(`/api/servers/${selectedServer}/requests/${requestId}/reject`, {
+        method: 'POST',
+      });
+      setRequests(prev => prev.filter(r => r.id !== requestId));
+    } catch (err) {
+      window.alert(`Failed to reject: ${err instanceof Error ? err.message : String(err)}`);
+    }
   };
 
   const startConfigure = (entity: ServerEntity) => {
@@ -215,13 +271,22 @@ export default function MyServers() {
     setConfiguringId(entity.id);
     setConfigChannels(entity.channels);
     setConfigTools(entity.tools);
+    setConfigDedicatedChannels(entity.dedicated_channels.join(', '));
+    setConfigTemplateId(entity.template_id);
   };
 
   const saveConfig = async (entityId: string) => {
     setSavingConfig(true);
+    const dedicatedArr = configDedicatedChannels
+      .split(',').map(s => s.trim()).filter(Boolean);
     await apiFetch(`/api/servers/${selectedServer}/entities/${entityId}`, {
       method: 'PATCH',
-      body: JSON.stringify({ channels: configChannels, tools: configTools }),
+      body: JSON.stringify({
+        channels: configChannels,
+        tools: configTools,
+        template_id: configTemplateId,
+        dedicated_channels: dedicatedArr,
+      }),
     });
     setSavingConfig(false);
     setConfiguringId(null);
@@ -243,7 +308,7 @@ export default function MyServers() {
       <h2 className="text-xl font-semibold mb-6">My Servers</h2>
 
       {/* Server selector */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         {servers.map(s => (
           <button
             key={s.id}
@@ -412,10 +477,15 @@ export default function MyServers() {
                             Edit
                           </button>
                           <button
+                            type="button"
                             onClick={() => deleteTemplate(t.id)}
-                            className="text-xs text-danger hover:text-danger/80 transition-colors"
+                            className={`text-xs transition-colors ${
+                              deletingTemplateId === t.id
+                                ? 'text-white bg-danger px-2 py-0.5 rounded'
+                                : 'text-danger hover:text-danger/80'
+                            }`}
                           >
-                            Delete
+                            {deletingTemplateId === t.id ? 'Sure?' : 'Delete'}
                           </button>
                         </div>
                       </div>
@@ -438,17 +508,17 @@ export default function MyServers() {
                     key={req.id}
                     className="bg-bg-card border border-warning/30 rounded-lg p-4"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         {req.entity_avatar ? (
-                          <img src={req.entity_avatar} alt="" className="w-10 h-10 rounded-full" />
+                          <img src={req.entity_avatar} alt="" className="w-10 h-10 rounded-full flex-shrink-0" />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-bg-deep flex items-center justify-center text-text-muted text-sm">
+                          <div className="w-10 h-10 rounded-full bg-bg-deep flex items-center justify-center text-text-muted text-sm flex-shrink-0">
                             ?
                           </div>
                         )}
-                        <div>
-                          <div className="flex items-center gap-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
                             <p className="font-medium">{req.entity_name}</p>
                             {req.entity_platform && (
                               <span
@@ -466,7 +536,7 @@ export default function MyServers() {
                           </p>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 self-end sm:self-auto flex-shrink-0">
                         <button
                           onClick={() => {
                             if (approvingId === req.id) {
@@ -475,6 +545,17 @@ export default function MyServers() {
                               setApprovingId(req.id);
                               setApproveChannels([]);
                               setApproveTools([]);
+                              setApproveTemplateId(null);
+                              setApproveDedicatedChannels('');
+                              // Auto-apply default template if set
+                              if (serverSettings?.default_template) {
+                                const def = templates.find(t => t.id === serverSettings.default_template);
+                                if (def) {
+                                  setApproveChannels(def.channels);
+                                  setApproveTools(def.tools);
+                                  setApproveTemplateId(def.id);
+                                }
+                              }
                             }
                           }}
                           className="px-3 py-1.5 text-xs bg-accent hover:bg-accent-hover text-white rounded transition-colors"
@@ -482,10 +563,15 @@ export default function MyServers() {
                           {approvingId === req.id ? 'Cancel' : 'Approve'}
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleReject(req.id)}
-                          className="px-3 py-1.5 text-xs bg-bg-surface hover:bg-danger/20 text-danger rounded transition-colors"
+                          className={`px-3 py-1.5 text-xs rounded transition-colors ${
+                            rejectingId === req.id
+                              ? 'bg-danger text-white hover:bg-danger/80'
+                              : 'bg-bg-surface hover:bg-danger/20 text-danger'
+                          }`}
                         >
-                          Reject
+                          {rejectingId === req.id ? 'Sure?' : 'Reject'}
                         </button>
                       </div>
                     </div>
@@ -524,6 +610,28 @@ export default function MyServers() {
                         {/* Tool whitelist */}
                         <ToolPicker selected={approveTools} onChange={setApproveTools} />
 
+                        {/* Dedicated channels */}
+                        <div>
+                          <label className="text-xs text-text-muted block mb-1.5">
+                            Dedicated channels
+                          </label>
+                          <p className="text-xs text-text-muted/60 mb-2">
+                            Private channels for this Entity (independent of template). Comma-separated channel IDs.
+                          </p>
+                          <input
+                            value={approveDedicatedChannels}
+                            onChange={e => setApproveDedicatedChannels(e.target.value)}
+                            placeholder="e.g. 1234567890, 9876543210"
+                            className="w-full bg-bg-deep border border-border rounded px-3 py-1.5 text-sm font-mono"
+                          />
+                        </div>
+
+                        {approveTemplateId && (
+                          <p className="text-xs text-accent">
+                            Will be bound to template: {templates.find(t => t.id === approveTemplateId)?.name}
+                          </p>
+                        )}
+
                         <button
                           onClick={() => handleApprove(req.id)}
                           className="px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm rounded transition-colors"
@@ -552,17 +660,17 @@ export default function MyServers() {
                     key={entity.id}
                     className="bg-bg-card border border-border rounded-lg p-4"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         {entity.avatar_url ? (
-                          <img src={entity.avatar_url} alt="" className="w-8 h-8 rounded-full" />
+                          <img src={entity.avatar_url} alt="" className="w-8 h-8 rounded-full flex-shrink-0" />
                         ) : (
-                          <div className="w-8 h-8 rounded-full bg-bg-deep flex items-center justify-center text-text-muted text-xs">
+                          <div className="w-8 h-8 rounded-full bg-bg-deep flex items-center justify-center text-text-muted text-xs flex-shrink-0">
                             ?
                           </div>
                         )}
-                        <div>
-                          <div className="flex items-center gap-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
                             <p className="font-medium">{entity.name}</p>
                             {entity.platform && (
                               <span
@@ -576,15 +684,25 @@ export default function MyServers() {
                               <span className="text-[10px] text-text-muted">@{entity.owner_name}</span>
                             )}
                           </div>
-                          <p className="text-xs text-text-muted">
-                            {entity.channels.length === 0 ? 'All channels' : `${entity.channels.length} channel${entity.channels.length !== 1 ? 's' : ''}`}
-                            {' · '}
-                            {entity.tools.length === 0 ? 'All tools' : `${entity.tools.length} tool${entity.tools.length !== 1 ? 's' : ''}`}
-                            {entity.role_id && <span className="ml-2 text-accent">@mentionable</span>}
-                          </p>
+                          <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-text-muted mt-0.5">
+                            <span>
+                              {entity.channels.length === 0 ? 'All channels' : `${entity.channels.length} channel${entity.channels.length !== 1 ? 's' : ''}`}
+                              {' · '}
+                              {entity.tools.length === 0 ? 'All tools' : `${entity.tools.length} tool${entity.tools.length !== 1 ? 's' : ''}`}
+                            </span>
+                            {entity.template_id && (
+                              <span className="text-accent">
+                                {templates.find(t => t.id === entity.template_id)?.name || 'Template'}
+                              </span>
+                            )}
+                            {entity.dedicated_channels.length > 0 && (
+                              <span className="text-warning">+{entity.dedicated_channels.length} dedicated</span>
+                            )}
+                            {entity.role_id && <span className="text-accent">@mentionable</span>}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-1.5 self-end sm:self-auto flex-shrink-0">
                         <button
                           onClick={() => startConfigure(entity)}
                           className="px-2.5 py-1 text-xs bg-bg-surface hover:bg-border text-text-muted rounded transition-colors"
@@ -592,10 +710,15 @@ export default function MyServers() {
                           {configuringId === entity.id ? 'Close' : 'Configure'}
                         </button>
                         <button
-                          onClick={() => handleRemove(entity.id, entity.name)}
-                          className="px-2.5 py-1 text-xs bg-bg-surface hover:bg-danger/20 text-danger rounded transition-colors"
+                          type="button"
+                          onClick={() => handleRemove(entity.id)}
+                          className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                            removingId === entity.id
+                              ? 'bg-danger text-white hover:bg-danger/80'
+                              : 'bg-bg-surface hover:bg-danger/20 text-danger'
+                          }`}
                         >
-                          Remove
+                          {removingId === entity.id ? 'Sure?' : 'Remove'}
                         </button>
                       </div>
                     </div>
@@ -630,6 +753,70 @@ export default function MyServers() {
 
                         {/* Tool whitelist */}
                         <ToolPicker selected={configTools} onChange={setConfigTools} />
+
+                        {/* Template binding */}
+                        {templates.length > 0 && (
+                          <div>
+                            <label className="text-xs text-text-muted block mb-1.5">
+                              Bound template
+                              {configTemplateId && (
+                                <span className="ml-1 text-accent">
+                                  ({templates.find(t => t.id === configTemplateId)?.name})
+                                </span>
+                              )}
+                            </label>
+                            <p className="text-xs text-text-muted/60 mb-2">
+                              Bind to a template so channel/tool changes propagate automatically. Manual channel edits detach the binding.
+                            </p>
+                            <div className="flex gap-2 flex-wrap">
+                              {templates.map(tmpl => (
+                                <button
+                                  key={tmpl.id}
+                                  onClick={() => applyTemplateToConfig(tmpl)}
+                                  className={`px-3 py-1.5 text-xs rounded transition-colors ${
+                                    configTemplateId === tmpl.id
+                                      ? 'bg-accent/20 text-accent border border-accent/30'
+                                      : 'bg-bg-surface hover:bg-border text-text-muted'
+                                  }`}
+                                >
+                                  {tmpl.name}
+                                </button>
+                              ))}
+                              {configTemplateId && (
+                                <button
+                                  onClick={() => setConfigTemplateId(null)}
+                                  className="px-3 py-1.5 text-xs bg-bg-surface hover:bg-danger/20 text-danger rounded transition-colors"
+                                >
+                                  Detach
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Dedicated channels */}
+                        <div>
+                          <label className="text-xs text-text-muted block mb-1.5">
+                            Dedicated channels
+                          </label>
+                          <p className="text-xs text-text-muted/60 mb-2">
+                            Private channels for this Entity, independent of template. Comma-separated channel IDs.
+                          </p>
+                          <input
+                            value={configDedicatedChannels}
+                            onChange={e => setConfigDedicatedChannels(e.target.value)}
+                            placeholder="e.g. 1234567890, 9876543210"
+                            className="w-full bg-bg-deep border border-border rounded px-3 py-1.5 text-sm font-mono"
+                          />
+                          {configDedicatedChannels && (
+                            <p className="text-[10px] text-text-muted mt-1">
+                              {configDedicatedChannels.split(',').map(s => s.trim()).filter(Boolean).map(id => {
+                                const ch = serverChannels.find(c => c.id === id);
+                                return ch ? `#${ch.name}` : id;
+                              }).join(', ')}
+                            </p>
+                          )}
+                        </div>
 
                         {/* Owner's watch/blocked info */}
                         {(entity.watch_channels.length > 0 || entity.blocked_channels.length > 0) && (

@@ -52,6 +52,14 @@ export async function createEntityRole(serverId: string, entityName: string): Pr
 }
 
 /**
+ * Rename an entity's role on a server.
+ */
+export async function renameEntityRole(serverId: string, roleId: string, newName: string): Promise<void> {
+  await discordBotRequest(`/guilds/${serverId}/roles/${roleId}`, 'PATCH', { name: newName });
+  logger.info(`Renamed role ${roleId} to "${newName}" on server ${serverId}`);
+}
+
+/**
  * Delete an entity's role from a server.
  */
 export async function deleteEntityRole(serverId: string, roleId: string): Promise<void> {

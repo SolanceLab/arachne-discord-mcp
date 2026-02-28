@@ -38,8 +38,11 @@ async function main() {
     }
   });
 
+  // Initialize webhook manager
+  const webhookManager = new WebhookManager(gateway.discordClient);
+
   // Initialize router (gateway → entity queues)
-  const _router = new Router(gateway, registry, bus, gateway.discordClient);
+  const _router = new Router(gateway, registry, bus, gateway.discordClient, webhookManager);
 
   // Auto-leave banned servers on rejoin
   gateway.on('guildCreate', async (guild: { id: string; name: string; leave: () => Promise<void> }) => {
@@ -48,9 +51,6 @@ async function main() {
       await guild.leave();
     }
   });
-
-  // Initialize webhook manager
-  const webhookManager = new WebhookManager(gateway.discordClient);
 
   // Create and start HTTP server for MCP endpoints
   const app = createMcpHttpServer({

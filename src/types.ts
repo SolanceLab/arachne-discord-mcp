@@ -26,8 +26,10 @@ export interface Entity {
 export interface EntityServer {
   entity_id: string;
   server_id: string;
-  channels: string;          // JSON array: admin whitelist of channel IDs (empty = all)
+  channels: string;          // JSON array: effective whitelist (template + dedicated, empty = all)
   tools: string;             // JSON array: admin whitelist of MCP tools (empty = all)
+  template_id: string | null;      // Bound template ID (null = manual/unbound)
+  dedicated_channels: string;      // JSON array: per-entity extra channels independent of template
   watch_channels: string;    // JSON array: entity owner's active-monitoring channels
   blocked_channels: string;  // JSON array: entity owner's no-respond channels
   role_id: string | null;    // Discord role ID for @mentions
@@ -81,6 +83,7 @@ export interface NormalizedMessage {
   content: string;
   timestamp: Date;
   mentionedRoleIds: string[];
+  replyToMessageId: string | null;
 }
 
 // --- MCP Context ---

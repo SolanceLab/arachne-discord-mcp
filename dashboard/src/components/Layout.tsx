@@ -25,8 +25,8 @@ export default function Layout() {
       </div>
 
       {/* Navigation bar */}
-      <header className="bg-bg-surface border-b border-border px-6 py-2 flex items-center justify-between">
-        <nav className="flex items-center gap-1">
+      <header className="bg-bg-surface border-b border-border px-6 py-2 flex items-center gap-4 overflow-x-auto">
+        <nav className="flex items-center gap-1 flex-shrink-0">
           <Link to="/" className="px-2 py-1 hover:opacity-80 transition-opacity">
             <img src="/assets/arachne-clean.png" alt="Arachne" className="h-5" />
           </Link>
@@ -36,7 +36,7 @@ export default function Layout() {
               key={n.to}
               to={n.to}
               className={({ isActive }) =>
-                `px-3 py-1.5 rounded text-sm transition-colors ${
+                `px-3 py-1.5 rounded text-sm whitespace-nowrap transition-colors ${
                   isActive
                     ? 'bg-accent/15 text-accent'
                     : 'text-text-muted hover:text-text-primary hover:bg-bg-card'
@@ -47,14 +47,14 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0 ml-auto">
           {avatarUrl && (
             <img src={avatarUrl} alt="" className="w-7 h-7 rounded-full" />
           )}
-          <span className="text-sm text-text-muted">{user?.username}</span>
+          <span className="text-sm text-text-muted whitespace-nowrap">{user?.username}</span>
           <button
             onClick={logout}
-            className="text-xs text-text-muted hover:text-danger transition-colors"
+            className="text-xs text-text-muted hover:text-danger transition-colors whitespace-nowrap"
           >
             Logout
           </button>
@@ -69,8 +69,8 @@ export default function Layout() {
       {/* Footer */}
       <footer className="px-6 py-6 border-t border-border/30">
         <div className="flex flex-col items-center justify-center gap-2">
-          <img src="/assets/House%20of%20Solance.png" alt="House of Solance" className="h-4 opacity-50" />
-          <p className="text-[10px] text-text-muted/30">© 2026 House of Solance · AGPL-3.0</p>
+          <img src="/assets/House%20of%20Solance.png" alt="House of Solance" className="h-4 opacity-70" />
+          <p className="text-[10px] text-text-muted/60">© 2026 House of Solance · AGPL-3.0</p>
         </div>
       </footer>
     </div>

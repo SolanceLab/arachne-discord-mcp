@@ -50,6 +50,14 @@ export class EntityRegistry {
       this.db.exec("ALTER TABLE entity_servers ADD COLUMN announce_channel TEXT DEFAULT NULL");
       logger.info('Migration: added announce_channel column to entity_servers');
     }
+    if (!esCols.some(c => c.name === 'template_id')) {
+      this.db.exec("ALTER TABLE entity_servers ADD COLUMN template_id TEXT DEFAULT NULL");
+      logger.info('Migration: added template_id column to entity_servers');
+    }
+    if (!esCols.some(c => c.name === 'dedicated_channels')) {
+      this.db.exec("ALTER TABLE entity_servers ADD COLUMN dedicated_channels TEXT DEFAULT '[]'");
+      logger.info('Migration: added dedicated_channels column to entity_servers');
+    }
     if (!esCols.some(c => c.name === 'watch_channels')) {
       this.db.exec("ALTER TABLE entity_servers ADD COLUMN watch_channels TEXT DEFAULT '[]'");
       logger.info('Migration: added watch_channels column to entity_servers');
@@ -320,13 +328,13 @@ export class EntityRegistry {
   /**
    * Add an entity to a server with optional channel restrictions.
    */
-  addServer(entityId: string, serverId: string, channels: string[] = [], tools: string[] = []): boolean {
+  addServer(entityId: string, serverId: string, channels: string[] = [], tools: string[] = [], templateId?: string | null, dedicatedChannels: string[] = []): boolean {
     try {
       this.db.prepare(`
-        INSERT OR REPLACE INTO entity_servers (entity_id, server_id, channels, tools)
-        VALUES (?, ?, ?, ?)
-      `).run(entityId, serverId, JSON.stringify(channels), JSON.stringify(tools));
-      logger.info(`Entity ${entityId} added to server ${serverId}`);
+        INSERT OR REPLACE INTO entity_servers (entity_id, server_id, channels, tools, template_id, dedicated_channels)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(entityId, serverId, JSON.stringify(channels), JSON.stringify(tools), templateId ?? null, JSON.stringify(dedicatedChannels));
+      logger.info(`Entity ${entityId} added to server ${serverId}${templateId ? ` (template: ${templateId})` : ''}`);
       return true;
     } catch (err) {
       logger.error(`Failed to add server: ${err}`);
@@ -425,6 +433,13 @@ export class EntityRegistry {
   }
 
   /**
+   * Backfill owner_name for an entity (used when resolving from Discord).
+   */
+  updateEntityOwnerName(entityId: string, ownerName: string): void {
+    this.db.prepare('UPDATE entities SET owner_name = ? WHERE id = ?').run(ownerName, entityId);
+  }
+
+  /**
    * Update entity identity (name and/or avatar).
    */
   updateEntityIdentity(entityId: string, fields: {
@@ -459,13 +474,13 @@ export class EntityRegistry {
   /**
    * Get all entities on a specific server (with owner info).
    */
-  getEntitiesForServer(serverId: string): Array<Entity & { channels: string; tools: string; watch_channels: string; blocked_channels: string; role_id: string | null }> {
+  getEntitiesForServer(serverId: string): Array<Entity & { channels: string; tools: string; watch_channels: string; blocked_channels: string; role_id: string | null; template_id: string | null; dedicated_channels: string }> {
     return this.db.prepare(`
-      SELECT e.*, es.channels, es.tools, es.watch_channels, es.blocked_channels, es.role_id
+      SELECT e.*, es.channels, es.tools, es.watch_channels, es.blocked_channels, es.role_id, es.template_id, es.dedicated_channels
       FROM entities e
       JOIN entity_servers es ON e.id = es.entity_id
       WHERE es.server_id = ? AND e.active = 1
-    `).all(serverId) as Array<Entity & { channels: string; tools: string; watch_channels: string; blocked_channels: string; role_id: string | null }>;
+    `).all(serverId) as Array<Entity & { channels: string; tools: string; watch_channels: string; blocked_channels: string; role_id: string | null; template_id: string | null; dedicated_channels: string }>;
   }
 
   /**
@@ -513,23 +528,62 @@ export class EntityRegistry {
   }
 
   /**
-   * Update entity-server config (channels, tools).
+   * Update entity-server config (channels, tools, template binding, dedicated channels).
+   * If channels/tools are set directly (not via template), clears template_id (manual override).
    */
-  updateEntityServerConfig(entityId: string, serverId: string, channels?: string[], tools?: string[]): boolean {
+  updateEntityServerConfig(entityId: string, serverId: string, channels?: string[], tools?: string[], templateId?: string | null, dedicatedChannels?: string[]): boolean {
     const existing = this.db.prepare(
       'SELECT * FROM entity_servers WHERE entity_id = ? AND server_id = ?'
     ).get(entityId, serverId) as EntityServer | undefined;
     if (!existing) return false;
 
+    // If templateId is explicitly passed, use it; otherwise if channels are being set manually, clear binding
+    let newTemplateId: string | null;
+    if (templateId !== undefined) {
+      newTemplateId = templateId;
+    } else if (channels !== undefined) {
+      newTemplateId = null; // Manual channel edit detaches from template
+    } else {
+      newTemplateId = existing.template_id;
+    }
+
     this.db.prepare(`
-      UPDATE entity_servers SET channels = ?, tools = ?
+      UPDATE entity_servers SET channels = ?, tools = ?, template_id = ?, dedicated_channels = ?
       WHERE entity_id = ? AND server_id = ?
     `).run(
       channels !== undefined ? JSON.stringify(channels) : existing.channels,
       tools !== undefined ? JSON.stringify(tools) : existing.tools,
+      newTemplateId,
+      dedicatedChannels !== undefined ? JSON.stringify(dedicatedChannels) : existing.dedicated_channels,
       entityId, serverId
     );
     return true;
+  }
+
+  /**
+   * Propagate template changes to all bound entities on a server.
+   * Recomputes each entity's channels = template.channels + entity.dedicated_channels.
+   */
+  propagateTemplate(templateId: string, templateChannels: string[], templateTools: string[]): number {
+    const bound = this.db.prepare(
+      'SELECT * FROM entity_servers WHERE template_id = ?'
+    ).all(templateId) as EntityServer[];
+
+    let count = 0;
+    for (const es of bound) {
+      const dedicated: string[] = JSON.parse(es.dedicated_channels || '[]');
+      const merged = [...new Set([...templateChannels, ...dedicated])];
+      this.db.prepare(`
+        UPDATE entity_servers SET channels = ?, tools = ?
+        WHERE entity_id = ? AND server_id = ?
+      `).run(JSON.stringify(merged), JSON.stringify(templateTools), es.entity_id, es.server_id);
+      count++;
+    }
+
+    if (count > 0) {
+      logger.info(`Propagated template ${templateId} to ${count} entity(s)`);
+    }
+    return count;
   }
 
   /**
@@ -627,6 +681,9 @@ export class EntityRegistry {
    * Hard delete an entity and all its server associations.
    */
   deleteEntity(entityId: string): boolean {
+    this.db.prepare('DELETE FROM oauth_refresh_tokens WHERE entity_id = ?').run(entityId);
+    this.db.prepare('DELETE FROM oauth_access_tokens WHERE entity_id = ?').run(entityId);
+    this.db.prepare('DELETE FROM oauth_auth_codes WHERE entity_id = ?').run(entityId);
     this.db.prepare('DELETE FROM entity_servers WHERE entity_id = ?').run(entityId);
     this.db.prepare('DELETE FROM server_requests WHERE entity_id = ?').run(entityId);
     keyStore.delete(entityId);

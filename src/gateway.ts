@@ -49,6 +49,7 @@ export class Gateway extends EventEmitter {
         content: message.content,
         timestamp: message.createdAt,
         mentionedRoleIds: message.mentions.roles.map(r => r.id),
+        replyToMessageId: message.reference?.messageId ?? null,
       };
 
       this.emit('message', normalized);

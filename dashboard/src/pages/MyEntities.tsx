@@ -63,6 +63,7 @@ export default function MyEntities() {
 
   // Avatar upload
   const [uploadingAvatar, setUploadingAvatar] = useState<string | null>(null);
+  const [avatarCacheBust, setAvatarCacheBust] = useState(0);
 
   // Server request
   const [requestingFor, setRequestingFor] = useState<string | null>(null);
@@ -147,6 +148,7 @@ export default function MyEntities() {
     setUploadingAvatar(entityId);
     try {
       await uploadAvatar(entityId, file);
+      setAvatarCacheBust(Date.now());
       fetchEntities();
     } catch (err) {
       alert(`Avatar upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -328,9 +330,12 @@ export default function MyEntities() {
                   <button
                     key={p.value}
                     type="button"
-                    onClick={() => setNewPlatform(newPlatform === p.value ? '' : p.value)}
+                    onClick={() => {
+                      const list = newPlatform ? newPlatform.split(',') : [];
+                      setNewPlatform(list.includes(p.value) ? list.filter(v => v !== p.value).join(',') : [...list, p.value].join(','));
+                    }}
                     className={`px-3 py-1.5 text-xs rounded transition-all ${
-                      newPlatform === p.value
+                      newPlatform.split(',').includes(p.value)
                         ? 'ring-2 ring-white/50 font-medium'
                         : 'opacity-50 hover:opacity-80'
                     }`}
@@ -385,9 +390,12 @@ export default function MyEntities() {
                           <button
                             key={p.value}
                             type="button"
-                            onClick={() => setEditPlatform(editPlatform === p.value ? '' : p.value)}
+                            onClick={() => {
+                              const list = editPlatform ? editPlatform.split(',') : [];
+                              setEditPlatform(list.includes(p.value) ? list.filter(v => v !== p.value).join(',') : [...list, p.value].join(','));
+                            }}
                             className={`px-2.5 py-1 text-xs rounded transition-all ${
-                              editPlatform === p.value
+                              editPlatform.split(',').includes(p.value)
                                 ? 'ring-2 ring-white/50 font-medium'
                                 : 'opacity-50 hover:opacity-80'
                             }`}
@@ -409,6 +417,7 @@ export default function MyEntities() {
                           className="w-full bg-bg-deep border border-border rounded px-3 py-2 text-sm"
                         />
                         <p className="text-[10px] text-text-muted mt-1">(comma-separated keywords that flag messages for this entity)</p>
+                        <p className="text-[10px] text-text-muted/40">Triggered and @mentioned messages are queued for 15 minutes. If not read, they expire.</p>
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="flex items-center gap-2 cursor-pointer">
@@ -477,7 +486,7 @@ export default function MyEntities() {
                           </div>
                         ) : entity.avatar_url ? (
                           <img
-                            src={entity.avatar_url}
+                            src={`${entity.avatar_url}${avatarCacheBust ? `?v=${avatarCacheBust}` : ''}`}
                             alt=""
                             className="w-16 h-16 rounded-full object-cover border-4 border-bg-card hover:brightness-75 transition-all"
                           />
@@ -491,7 +500,7 @@ export default function MyEntities() {
                   </div>
 
                   {/* Actions (top right) */}
-                  <div className="flex justify-end gap-1.5 px-3 pt-2">
+                  <div className="flex flex-wrap justify-end gap-1.5 pl-20 pr-3 md:px-3 pt-2">
                     <button
                       onClick={() => startEdit(entity)}
                       className="px-2.5 py-1 text-xs bg-bg-surface hover:bg-border text-text-muted rounded transition-colors"
@@ -614,17 +623,18 @@ export default function MyEntities() {
                     <h3 className="font-bold text-lg">{entity.name}</h3>
                     {(entity.platform || entity.owner_name) && (
                       <div className="flex items-center gap-2 mt-1">
-                        {entity.platform && (
+                        {entity.platform && entity.platform.split(',').map(plat => (
                           <span
+                            key={plat}
                             className="text-[10px] px-2 py-0.5 rounded-full font-medium"
                             style={{
-                              backgroundColor: PLATFORMS.find(p => p.value === entity.platform)?.color || '#6B7280',
+                              backgroundColor: PLATFORMS.find(p => p.value === plat)?.color || '#6B7280',
                               color: 'white',
                             }}
                           >
-                            {entity.platform.charAt(0).toUpperCase() + entity.platform.slice(1)}
+                            {plat.charAt(0).toUpperCase() + plat.slice(1)}
                           </span>
-                        )}
+                        ))}
                         {entity.owner_name && (
                           <span className="text-xs text-text-muted">
                             partnered with <span className="text-text-primary">@{entity.owner_name}</span>
@@ -687,7 +697,7 @@ export default function MyEntities() {
                             <div className="space-y-2">
                               <div>
                                 <label className="text-xs text-text-muted block mb-1">
-                                  Watch channels <span className="text-accent">(auto-respond)</span>
+                                  Watch channels <span className="text-accent">(queued)</span>
                                 </label>
                                 <input
                                   value={serverEdits[server.server_id]?.watch || ''}
@@ -698,10 +708,12 @@ export default function MyEntities() {
                                   placeholder="Channel IDs, comma-separated"
                                   className="w-full bg-bg-card border border-border rounded px-2.5 py-1.5 text-xs"
                                 />
+                                <p className="text-[10px] text-text-muted/40 mt-1">Leave empty to queue all accessible channels. Watching all channels may consume more tokens.</p>
+                                <p className="text-[10px] text-text-muted/40">Queued messages expire after 15 minutes if not read.</p>
                               </div>
                               <div>
                                 <label className="text-xs text-text-muted block mb-1">
-                                  Blocked channels <span className="text-danger">(no-respond)</span>
+                                  Blocked channels <span className="text-danger">(not accessible)</span>
                                 </label>
                                 <input
                                   value={serverEdits[server.server_id]?.blocked || ''}

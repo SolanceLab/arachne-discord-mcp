@@ -31,6 +31,7 @@ interface FullEntity {
   name: string;
   avatar_url: string | null;
   owner_id: string | null;
+  owner_name: string | null;
   created_at: string;
   active: boolean;
   servers: EntityServer[];
@@ -77,6 +78,11 @@ export default function Operator() {
   const [assigningOwner, setAssigningOwner] = useState<string | null>(null);
   const [ownerInput, setOwnerInput] = useState('');
 
+  // Inline confirmations (click-twice, replaces browser confirm())
+  const [deletingEntityId, setDeletingEntityId] = useState<string | null>(null);
+  const [kickingServerId, setKickingServerId] = useState<string | null>(null);
+  const [banningServerId, setBanningServerId] = useState<string | null>(null);
+
   const isOperator = user?.is_operator ?? false;
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -119,10 +125,18 @@ export default function Operator() {
     refresh();
   };
 
-  const handleDelete = async (entityId: string, entityName: string) => {
-    if (!confirm(`Permanently delete ${entityName}? This cannot be undone.`)) return;
-    await apiFetch(`/api/operator/entities/${entityId}`, { method: 'DELETE' });
-    refresh();
+  const handleDelete = async (entityId: string) => {
+    if (deletingEntityId !== entityId) {
+      setDeletingEntityId(entityId);
+      return;
+    }
+    setDeletingEntityId(null);
+    try {
+      await apiFetch(`/api/operator/entities/${entityId}`, { method: 'DELETE' });
+      refresh();
+    } catch (err) {
+      window.alert(`Failed to delete: ${err instanceof Error ? err.message : String(err)}`);
+    }
   };
 
   const handleAddServer = async (entityId: string) => {
@@ -144,16 +158,34 @@ export default function Operator() {
     refresh();
   };
 
-  const handleKickServer = async (serverId: string, serverName: string) => {
-    if (!confirm(`Remove "${serverName}"? Arachne will leave this server. It can be re-invited later.`)) return;
-    await apiFetch(`/api/operator/servers/${serverId}`, { method: 'DELETE' });
-    refresh();
+  const handleKickServer = async (serverId: string) => {
+    if (kickingServerId !== serverId) {
+      setKickingServerId(serverId);
+      setBanningServerId(null);
+      return;
+    }
+    setKickingServerId(null);
+    try {
+      await apiFetch(`/api/operator/servers/${serverId}`, { method: 'DELETE' });
+      refresh();
+    } catch (err) {
+      window.alert(`Failed to remove: ${err instanceof Error ? err.message : String(err)}`);
+    }
   };
 
-  const handleBanServer = async (serverId: string, serverName: string) => {
-    if (!confirm(`Blacklist "${serverName}"? Arachne will leave and automatically reject any future invites from this server.`)) return;
-    await apiFetch(`/api/operator/servers/${serverId}?ban=true`, { method: 'DELETE' });
-    refresh();
+  const handleBanServer = async (serverId: string) => {
+    if (banningServerId !== serverId) {
+      setBanningServerId(serverId);
+      setKickingServerId(null);
+      return;
+    }
+    setBanningServerId(null);
+    try {
+      await apiFetch(`/api/operator/servers/${serverId}?ban=true`, { method: 'DELETE' });
+      refresh();
+    } catch (err) {
+      window.alert(`Failed to blacklist: ${err instanceof Error ? err.message : String(err)}`);
+    }
   };
 
   const handleUnbanServer = async (serverId: string) => {
@@ -239,16 +271,26 @@ export default function Operator() {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => handleKickServer(s.id, s.name)}
-                  className="flex-1 px-3 py-1.5 text-xs bg-bg-surface hover:bg-warning/20 text-warning border border-border rounded transition-colors"
+                  type="button"
+                  onClick={() => handleKickServer(s.id)}
+                  className={`flex-1 px-3 py-1.5 text-xs border rounded transition-colors ${
+                    kickingServerId === s.id
+                      ? 'bg-warning text-white border-warning'
+                      : 'bg-bg-surface hover:bg-warning/20 text-warning border-border'
+                  }`}
                 >
-                  Remove
+                  {kickingServerId === s.id ? 'Sure?' : 'Remove'}
                 </button>
                 <button
-                  onClick={() => handleBanServer(s.id, s.name)}
-                  className="flex-1 px-3 py-1.5 text-xs bg-bg-surface hover:bg-danger/20 text-danger border border-border rounded transition-colors"
+                  type="button"
+                  onClick={() => handleBanServer(s.id)}
+                  className={`flex-1 px-3 py-1.5 text-xs border rounded transition-colors ${
+                    banningServerId === s.id
+                      ? 'bg-danger text-white border-danger'
+                      : 'bg-bg-surface hover:bg-danger/20 text-danger border-border'
+                  }`}
                 >
-                  Blacklist
+                  {banningServerId === s.id ? 'Sure?' : 'Blacklist'}
                 </button>
               </div>
             </div>
@@ -275,7 +317,7 @@ export default function Operator() {
                   ID: {entity.id}
                 </p>
                 <p className="text-xs text-text-muted">
-                  Owner: {entity.owner_id || <span className="italic">unassigned</span>}
+                  Owner: {entity.owner_name ? `${entity.owner_name} (${entity.owner_id})` : entity.owner_id || <span className="italic">unassigned</span>}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -295,10 +337,15 @@ export default function Operator() {
                   + Server
                 </button>
                 <button
-                  onClick={() => handleDelete(entity.id, entity.name)}
-                  className="px-3 py-1.5 text-xs bg-bg-surface hover:bg-danger/20 text-danger rounded transition-colors"
+                  type="button"
+                  onClick={() => handleDelete(entity.id)}
+                  className={`px-3 py-1.5 text-xs rounded transition-colors ${
+                    deletingEntityId === entity.id
+                      ? 'bg-danger text-white hover:bg-danger/80'
+                      : 'bg-bg-surface hover:bg-danger/20 text-danger'
+                  }`}
                 >
-                  Delete
+                  {deletingEntityId === entity.id ? 'Sure?' : 'Delete'}
                 </button>
               </div>
             </div>

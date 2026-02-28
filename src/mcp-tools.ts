@@ -48,17 +48,18 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
   // --- read_messages ---
   server.tool(
     'read_messages',
-    'Read recent messages from the queue for subscribed channels. Messages are held for 15 minutes after they arrive. Use triggered_only to filter for messages that matched your trigger words.',
+    'Read recent messages from the queue for subscribed channels. Messages are held for 15 minutes after they arrive. Use addressed_only to filter for messages directed at you (trigger words or @mentions). Use unread_only to get only messages you haven\'t seen yet.',
     {
       channel_id: z.string().optional().describe('Channel ID to read from. If omitted, reads from all subscribed channels.'),
       limit: z.number().optional().default(50).describe('Maximum number of messages to return (default 50)'),
-      triggered_only: z.boolean().optional().default(false).describe('If true, only return messages that matched one of your trigger words.'),
+      addressed_only: z.boolean().optional().default(false).describe('If true, only return messages directed at you — either matching a trigger word or mentioning your role.'),
+      unread_only: z.boolean().optional().default(false).describe('If true, only return messages received since your last read. The cursor advances after each call.'),
     },
-    async ({ channel_id, limit, triggered_only }) => {
+    async ({ channel_id, limit, addressed_only, unread_only }) => {
       if (channel_id && !canAccessChannel(channel_id)) {
         return { content: [{ type: 'text' as const, text: 'Error: You do not have access to this channel.' }] };
       }
-      const messages = bus.read(entity.id, channel_id, limit, ctx.encryptionKey, triggered_only);
+      const messages = bus.read(entity.id, channel_id, limit, ctx.encryptionKey, addressed_only, unread_only);
       return {
         content: [{ type: 'text' as const, text: JSON.stringify(messages, null, 2) }],
       };
@@ -82,7 +83,8 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
           channel_id,
           content,
           entity.name,
-          entity.avatar_url
+          entity.avatar_url,
+          entity.id
         );
         return {
           content: [{ type: 'text' as const, text: JSON.stringify({ success: true, message_id: result.messageId }) }],
@@ -266,7 +268,8 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
             color: embedColor,
             fields: fields.length > 0 ? fields : undefined,
             footer: { text: 'Powered by Arachne' },
-          }]
+          }],
+          entity.id
         );
 
         return {
@@ -442,7 +445,8 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
           buffer,
           entity.name,
           entity.avatar_url,
-          content
+          content,
+          entity.id
         );
         return {
           content: [{ type: 'text' as const, text: JSON.stringify({ success: true, message_id: result.messageId }) }],

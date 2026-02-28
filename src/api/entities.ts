@@ -6,7 +6,8 @@ import fs from 'fs';
 import sharp from 'sharp';
 import type { Client } from 'discord.js';
 import { requireAuth } from './middleware.js';
-import { deleteEntityRole } from './discord-api.js';
+import { createEntityRole, deleteEntityRole, renameEntityRole } from './discord-api.js';
+import { logger } from '../logger.js';
 import type { EntityRegistry } from '../entity-registry.js';
 
 const DATA_DIR = process.env.DATA_DIR || '/data';
@@ -174,6 +175,35 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
     });
     // Re-stamp owner_name from current user (backfills old entities + handles username changes)
     registry.setEntityOwner(entity.id, entity.owner_id, req.user!.username);
+
+    // If name changed, rename Discord roles across all servers (recreate if deleted)
+    if (name && name !== entity.name) {
+      const servers = registry.getEntityServers(entity.id);
+      for (const es of servers) {
+        (async () => {
+          try {
+            if (es.role_id) {
+              await renameEntityRole(es.server_id, es.role_id, name);
+            } else {
+              // No role_id stored — create fresh
+              const newRoleId = await createEntityRole(es.server_id, name);
+              registry.updateServerRoleId(entity.id, es.server_id, newRoleId);
+              logger.info(`Created missing role for ${name} on server ${es.server_id}`);
+            }
+          } catch (err: any) {
+            // Role was deleted — recreate it
+            try {
+              const newRoleId = await createEntityRole(es.server_id, name);
+              registry.updateServerRoleId(entity.id, es.server_id, newRoleId);
+              logger.info(`Recreated deleted role for ${name} on server ${es.server_id}`);
+            } catch (createErr: any) {
+              logger.info(`Failed to recreate role on server ${es.server_id}: ${createErr.message}`);
+            }
+          }
+        })();
+      }
+    }
+
     res.json({ success: true });
   });
 
@@ -292,12 +322,15 @@ export function createEntitiesRouter(registry: EntityRegistry, discordClient: Cl
 
   // DELETE /api/entities/:id — owner deletes their own entity
   router.delete('/:id', async (req: Request, res: Response) => {
+    logger.info(`DELETE /api/entities/${req.params.id} by user=${req.user?.sub}`);
     const entity = registry.getEntity(req.params.id as string);
     if (!entity || !entity.active) {
+      logger.info(`Delete 404: entity=${req.params.id} found=${!!entity} active=${entity?.active}`);
       res.status(404).json({ error: 'Entity not found' });
       return;
     }
     if (entity.owner_id !== req.user!.sub && !req.user!.is_operator) {
+      logger.info(`Delete 403: entity=${req.params.id} owner=${entity.owner_id} user=${req.user!.sub}`);
       res.status(403).json({ error: 'Not your entity' });
       return;
     }

@@ -12,21 +12,37 @@ export function createOperatorRouter(registry: EntityRegistry, discordClient: Cl
   router.use(requireAuth, requireOperator);
 
   // GET /api/operator/entities — all entities with owners and servers
-  router.get('/entities', (_req: Request, res: Response) => {
+  router.get('/entities', async (_req: Request, res: Response) => {
     const entities = registry.listEntities();
-    const result = entities.map(e => ({
-      id: e.id,
-      name: e.name,
-      avatar_url: e.avatar_url,
-      owner_id: e.owner_id,
-      created_at: e.created_at,
-      active: e.active,
-      servers: registry.getEntityServers(e.id).map(s => ({
-        server_id: s.server_id,
-        channels: JSON.parse(s.channels),
-        tools: JSON.parse(s.tools),
-        role_id: s.role_id,
-      })),
+    const result = await Promise.all(entities.map(async e => {
+      let ownerName = e.owner_name;
+
+      // Resolve missing owner_name from Discord and backfill
+      if (!ownerName && e.owner_id) {
+        try {
+          const user = await discordClient.users.fetch(e.owner_id);
+          ownerName = user.globalName || user.username;
+          registry.updateEntityOwnerName(e.id, ownerName);
+        } catch {
+          // User may have left all mutual servers — leave null
+        }
+      }
+
+      return {
+        id: e.id,
+        name: e.name,
+        avatar_url: e.avatar_url,
+        owner_id: e.owner_id,
+        owner_name: ownerName,
+        created_at: e.created_at,
+        active: e.active,
+        servers: registry.getEntityServers(e.id).map(s => ({
+          server_id: s.server_id,
+          channels: JSON.parse(s.channels),
+          tools: JSON.parse(s.tools),
+          role_id: s.role_id,
+        })),
+      };
     }));
     res.json(result);
   });

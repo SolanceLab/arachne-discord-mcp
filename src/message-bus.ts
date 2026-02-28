@@ -8,6 +8,7 @@ const EVICTION_INTERVAL_MS = 60 * 1000; // 1 minute
 
 export class MessageBus {
   private queues: Map<string, QueuedMessage[]> = new Map();
+  private readCursors: Map<string, number> = new Map(); // entityId (or entityId:channelId) → timestamp
   private ttlMs: number;
   private evictionTimer: NodeJS.Timeout | null = null;
 
@@ -66,7 +67,7 @@ export class MessageBus {
    * Read messages from an entity's queue (does NOT remove them — TTL handles expiry).
    * If decryptionKey is provided, encrypted messages are decrypted before returning.
    */
-  read(entityId: string, channelId?: string, limit = 50, decryptionKey?: Buffer, triggeredOnly?: boolean): ReadableMessage[] {
+  read(entityId: string, channelId?: string, limit = 50, decryptionKey?: Buffer, addressedOnly?: boolean, unreadOnly?: boolean): ReadableMessage[] {
     const queue = this.queues.get(entityId);
     if (!queue) return [];
 
@@ -77,12 +78,26 @@ export class MessageBus {
       messages = messages.filter(m => m.channelId === channelId);
     }
 
-    if (triggeredOnly) {
-      messages = messages.filter(m => m.triggered);
+    if (addressedOnly) {
+      messages = messages.filter(m => m.triggered || m.addressed);
+    }
+
+    // Filter by read cursor if unread_only requested
+    if (unreadOnly) {
+      const cursorKey = channelId ? `${entityId}:${channelId}` : entityId;
+      const cursor = this.readCursors.get(cursorKey) ?? 0;
+      messages = messages.filter(m => m.timestamp.getTime() > cursor);
     }
 
     // Most recent first, apply limit
     const sliced = messages.slice(-limit);
+
+    // Advance read cursor to the latest message timestamp
+    if (unreadOnly && sliced.length > 0) {
+      const latestTs = Math.max(...sliced.map(m => m.timestamp.getTime()));
+      const cursorKey = channelId ? `${entityId}:${channelId}` : entityId;
+      this.readCursors.set(cursorKey, latestTs);
+    }
 
     return sliced.map(m => {
       let content = m.content;

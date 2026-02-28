@@ -93,6 +93,8 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
       owner_name: e.owner_name,
       channels: JSON.parse(e.channels),
       tools: JSON.parse(e.tools),
+      template_id: e.template_id,
+      dedicated_channels: JSON.parse(e.dedicated_channels || '[]'),
       watch_channels: JSON.parse(e.watch_channels),
       blocked_channels: JSON.parse(e.blocked_channels),
       role_id: e.role_id,
@@ -129,7 +131,7 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
       return;
     }
 
-    const { channels = [], tools = [] } = req.body;
+    const { channels = [], tools = [], template_id = null, dedicated_channels = [] } = req.body;
     const entity = registry.getEntity(request.entity_id);
     if (!entity) {
       res.status(404).json({ error: 'Entity not found' });
@@ -137,8 +139,8 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
     }
 
     try {
-      // Add entity to server
-      registry.addServer(request.entity_id, request.server_id, channels, tools);
+      // Add entity to server (with template binding + dedicated channels)
+      registry.addServer(request.entity_id, request.server_id, channels, tools, template_id, dedicated_channels);
 
       // Create Discord role
       let roleId: string | null = null;
@@ -215,10 +217,17 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
     }
     const { name, channels, tools } = req.body;
     const updated = registry.updateServerTemplate(template.id, { name, channels, tools });
+    const parsedChannels = JSON.parse(updated!.channels);
+    const parsedTools = JSON.parse(updated!.tools);
+
+    // Propagate to all entities bound to this template
+    const propagated = registry.propagateTemplate(template.id, parsedChannels, parsedTools);
+
     res.json({
       ...updated!,
-      channels: JSON.parse(updated!.channels),
-      tools: JSON.parse(updated!.tools),
+      channels: parsedChannels,
+      tools: parsedTools,
+      propagated,
     });
   });
 
@@ -235,8 +244,11 @@ export function createServersRouter(registry: EntityRegistry, discordClient: Cli
 
   // PATCH /api/servers/:id/entities/:eid — update entity config on server
   router.patch('/:id/entities/:eid', requireServerAdmin, (req: Request, res: Response) => {
-    const { channels, tools } = req.body;
-    const updated = registry.updateEntityServerConfig(req.params.eid as string, req.params.id as string, channels, tools);
+    const { channels, tools, template_id, dedicated_channels } = req.body;
+    const updated = registry.updateEntityServerConfig(
+      req.params.eid as string, req.params.id as string,
+      channels, tools, template_id, dedicated_channels
+    );
     if (!updated) {
       res.status(404).json({ error: 'Entity not on this server' });
       return;

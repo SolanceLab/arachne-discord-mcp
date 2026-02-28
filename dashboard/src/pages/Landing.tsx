@@ -74,6 +74,7 @@ export default function Landing() {
   const navigate = useNavigate();
   const [redirecting, setRedirecting] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogin = async () => {
     setRedirecting(true);
@@ -92,31 +93,60 @@ export default function Landing() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top bar — sticky */}
-      <header className="sticky top-0 z-50 bg-bg-deep/95 backdrop-blur-sm border-b border-border/30 px-6 py-4 grid grid-cols-[1fr_auto_1fr] items-center">
-        <div className="relative justify-self-start">
-          <img src="/assets/arachne-clean.png" alt="Arachne" className="h-8" />
-          <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] text-text-muted/40 tracking-[0.2em] uppercase">Beta</span>
+      <header className="sticky top-0 z-50 bg-bg-deep/95 backdrop-blur-sm border-b border-border/30">
+        <div className="px-6 py-4 flex items-center justify-between">
+          {/* Left: logo + mobile hamburger */}
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <img src="/assets/arachne-clean.png" alt="Arachne" className="h-8" />
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] text-text-muted/40 tracking-[0.2em] uppercase">Beta</span>
+            </div>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-1"
+              aria-label="Toggle menu"
+            >
+              <svg className="w-5 h-5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                {mobileMenuOpen
+                  ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  : <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
+                }
+              </svg>
+            </button>
+          </div>
+          {/* Center: desktop nav */}
+          <nav className="hidden md:flex items-center gap-6">
+            <a href="#philosophy" className="text-xs text-text-muted hover:text-text-primary transition-colors">About</a>
+            <a href="#invite" className="text-xs text-text-muted hover:text-text-primary transition-colors">Invite</a>
+            <a href="#capabilities" className="text-xs text-text-muted hover:text-text-primary transition-colors">Capabilities</a>
+            <a href="#how-it-works" className="text-xs text-text-muted hover:text-text-primary transition-colors">How it works</a>
+            <a href="#faq" className="text-xs text-text-muted hover:text-text-primary transition-colors">FAQ</a>
+          </nav>
+          {/* Right: The Loom */}
+          {loading ? (
+            <div className="w-10" />
+          ) : (
+            <button
+              onClick={user ? handleDashboard : handleLogin}
+              disabled={!user && redirecting}
+              className="flex flex-col items-center gap-1 group"
+            >
+              <img src="/assets/The%20Loom%20Final.png" alt="The Loom" className="h-10 opacity-70 group-hover:opacity-100 transition-opacity" />
+              <span className="text-[10px] text-text-muted group-hover:text-text-primary transition-colors">
+                {user ? `${user.username}` : (redirecting ? 'Redirecting...' : 'Login here')}
+              </span>
+            </button>
+          )}
         </div>
-        <nav className="hidden md:flex items-center gap-6">
-          <a href="#philosophy" className="text-xs text-text-muted hover:text-text-primary transition-colors">About</a>
-          <a href="#invite" className="text-xs text-text-muted hover:text-text-primary transition-colors">Invite</a>
-          <a href="#capabilities" className="text-xs text-text-muted hover:text-text-primary transition-colors">Capabilities</a>
-          <a href="#how-it-works" className="text-xs text-text-muted hover:text-text-primary transition-colors">How it works</a>
-          <a href="#faq" className="text-xs text-text-muted hover:text-text-primary transition-colors">FAQ</a>
-        </nav>
-        {loading ? (
-          <div />
-        ) : (
-          <button
-            onClick={user ? handleDashboard : handleLogin}
-            disabled={!user && redirecting}
-            className="flex flex-col items-center gap-1 group justify-self-end"
-          >
-            <img src="/assets/The%20Loom%20Final.png" alt="The Loom" className="h-10 opacity-70 group-hover:opacity-100 transition-opacity" />
-            <span className="text-[10px] text-text-muted group-hover:text-text-primary transition-colors">
-              {user ? `${user.username}` : (redirecting ? 'Redirecting...' : 'Login here')}
-            </span>
-          </button>
+        {/* Mobile nav dropdown */}
+        {mobileMenuOpen && (
+          <nav className="md:hidden border-t border-border/30 px-6 py-3 flex flex-wrap gap-x-6 gap-y-2">
+            <a href="#philosophy" onClick={() => setMobileMenuOpen(false)} className="text-xs text-text-muted hover:text-text-primary transition-colors">About</a>
+            <a href="#invite" onClick={() => setMobileMenuOpen(false)} className="text-xs text-text-muted hover:text-text-primary transition-colors">Invite</a>
+            <a href="#capabilities" onClick={() => setMobileMenuOpen(false)} className="text-xs text-text-muted hover:text-text-primary transition-colors">Capabilities</a>
+            <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-xs text-text-muted hover:text-text-primary transition-colors">How it works</a>
+            <a href="#faq" onClick={() => setMobileMenuOpen(false)} className="text-xs text-text-muted hover:text-text-primary transition-colors">FAQ</a>
+          </nav>
         )}
       </header>
 
@@ -272,7 +302,10 @@ export default function Landing() {
       <section className="max-w-5xl mx-auto px-6 py-20 w-full grid grid-cols-1 md:grid-cols-2 gap-12">
         {/* Left: How it works */}
         <div id="how-it-works">
-          <h2 className="text-xl font-semibold text-text-primary mb-8">How it works</h2>
+          <div className="flex items-baseline justify-between mb-8">
+            <h2 className="text-xl font-semibold text-text-primary">How it works</h2>
+            <Link to="/guide" className="text-xs text-accent hover:text-accent-hover transition-colors">Guide &rarr;</Link>
+          </div>
           <div className="space-y-1">
             {HOW_IT_WORKS.map((section, i) => {
               const key = `how-${i}`;
@@ -362,21 +395,23 @@ export default function Landing() {
       <footer className="mt-auto px-6 py-8 border-t border-border/30">
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-3">
           <div className="flex items-center">
-            <img src="/assets/House%20of%20Solance.png" alt="House of Solance" className="h-5 opacity-60" />
+            <img src="/assets/House%20of%20Solance.png" alt="House of Solance" className="h-5 opacity-70" />
           </div>
-          <p className="text-xs text-text-muted/40">
-            © 2026 House of Solance · <a href="https://github.com/SolanceLab/arachne-discord-mcp" target="_blank" rel="noopener noreferrer" className="hover:text-text-muted/60 transition-colors">AGPL-3.0</a> · Privacy by design
+          <p className="text-xs text-text-muted/60">
+            © 2026 House of Solance · <a href="https://github.com/SolanceLab/arachne-discord-mcp" target="_blank" rel="noopener noreferrer" className="hover:text-text-muted/80 transition-colors">AGPL-3.0</a> · Privacy by design
           </p>
-          <div className="flex items-center gap-3 text-xs text-text-muted/40">
-            <Link to="/faq" className="hover:text-text-muted/60 transition-colors">FAQ</Link>
+          <div className="flex flex-wrap justify-center items-center gap-3 text-xs text-text-muted/60">
+            <Link to="/faq" className="hover:text-text-muted/80 transition-colors">FAQ</Link>
             <span>·</span>
-            <Link to="/terms" className="hover:text-text-muted/60 transition-colors">Terms</Link>
+            <Link to="/terms" className="hover:text-text-muted/80 transition-colors">Terms</Link>
             <span>·</span>
-            <Link to="/changelog" className="hover:text-text-muted/60 transition-colors">Changelog</Link>
+            <Link to="/changelog" className="hover:text-text-muted/80 transition-colors">Changelog</Link>
             <span>·</span>
-            <Link to="/roadmap" className="hover:text-text-muted/60 transition-colors">Roadmap</Link>
+            <Link to="/roadmap" className="hover:text-text-muted/80 transition-colors">Roadmap</Link>
             <span>·</span>
-            <Link to="/guide" className="hover:text-text-muted/60 transition-colors">Guide</Link>
+            <Link to="/guide" className="hover:text-text-muted/80 transition-colors">Guide</Link>
+            <span>&middot;</span>
+            <Link to="/thank-you" className="hover:text-text-muted/80 transition-colors">Acknowledgements</Link>
           </div>
         </div>
       </footer>

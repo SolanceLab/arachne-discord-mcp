@@ -3,6 +3,7 @@ import { keyStore } from './key-store.js';
 import type { EntityRegistry } from './entity-registry.js';
 import type { Gateway } from './gateway.js';
 import type { MessageBus } from './message-bus.js';
+import type { WebhookManager } from './webhook-manager.js';
 import type { Entity, NormalizedMessage } from './types.js';
 import type { Client } from 'discord.js';
 
@@ -11,12 +12,14 @@ export class Router {
   private bus: MessageBus;
   private gateway: Gateway;
   private discordClient: Client;
+  private webhookManager: WebhookManager;
 
-  constructor(gateway: Gateway, registry: EntityRegistry, bus: MessageBus, discordClient: Client) {
+  constructor(gateway: Gateway, registry: EntityRegistry, bus: MessageBus, discordClient: Client, webhookManager: WebhookManager) {
     this.gateway = gateway;
     this.registry = registry;
     this.bus = bus;
     this.discordClient = discordClient;
+    this.webhookManager = webhookManager;
 
     this.gateway.on('message', (msg: NormalizedMessage) => this.handleMessage(msg));
     logger.info('Router attached to gateway');
@@ -94,6 +97,17 @@ export class Router {
       }
     }
 
+    // Reply-to-entity notification (independent of per-entity loop — checks all entities)
+    if (msg.replyToMessageId) {
+      const repliedEntityId = this.webhookManager.getEntityForMessage(msg.replyToMessageId);
+      if (repliedEntityId) {
+        const repliedEntity = this.registry.getEntity(repliedEntityId);
+        if (repliedEntity?.notify_on_mention && repliedEntity.owner_id) {
+          this.sendOwnerNotification(repliedEntity, msg, 'reply');
+        }
+      }
+    }
+
     logger.debug(
       `Routed message ${msg.messageId} to ${entities.length} entity(s) in #${msg.channelId}`
     );
@@ -102,7 +116,7 @@ export class Router {
   private async sendOwnerNotification(
     entity: Entity,
     msg: NormalizedMessage,
-    reason: 'mention' | 'trigger',
+    reason: 'mention' | 'trigger' | 'reply',
   ): Promise<void> {
     try {
       const owner = await this.discordClient.users.fetch(entity.owner_id!);
@@ -116,7 +130,7 @@ export class Router {
       const preview = msg.content.length > 200 ? msg.content.slice(0, 200) + '...' : msg.content;
       const jumpLink = `https://discord.com/channels/${msg.serverId}/${msg.channelId}/${msg.messageId}`;
 
-      const label = reason === 'mention' ? '@mentioned' : 'triggered';
+      const label = reason === 'mention' ? '@mentioned' : reason === 'reply' ? 'replied to' : 'triggered';
 
       const dmContent = [
         `**${entity.name}** was ${label} in **${serverName}** → ${channelName}`,
