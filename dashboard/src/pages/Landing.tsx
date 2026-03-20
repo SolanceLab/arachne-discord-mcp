@@ -410,8 +410,6 @@ export default function Landing() {
             <Link to="/roadmap" className="hover:text-text-muted/80 transition-colors">Roadmap</Link>
             <span>·</span>
             <Link to="/guide" className="hover:text-text-muted/80 transition-colors">Guide</Link>
-            <span>&middot;</span>
-            <Link to="/thank-you" className="hover:text-text-muted/80 transition-colors">Acknowledgements</Link>
           </div>
         </div>
       </footer>
