@@ -4,7 +4,7 @@ export default function Changelog() {
   return (
     <div className="min-h-screen flex flex-col bg-bg-deep">
       <header className="px-6 py-4 flex items-center justify-between">
-        <Link to="/"><img src="/assets/arachne-clean.png" alt="Arachne" className="h-8" /></Link>
+        <Link to="/"><span className="text-lg font-semibold text-text-primary">Arachne</span></Link>
         <Link to="/" className="text-xs text-text-muted hover:text-accent transition-colors">
           Back to home
         </Link>

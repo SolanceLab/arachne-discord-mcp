@@ -98,7 +98,7 @@ export default function Landing() {
           {/* Left: logo + mobile hamburger */}
           <div className="flex items-center gap-3">
             <div className="relative">
-              <img src="/assets/arachne-clean.png" alt="Arachne" className="h-8" />
+              <span className="text-lg font-semibold text-text-primary">Arachne</span>
               <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] text-text-muted/40 tracking-[0.2em] uppercase">Beta</span>
             </div>
             <button
@@ -131,7 +131,7 @@ export default function Landing() {
               disabled={!user && redirecting}
               className="flex flex-col items-center gap-1 group"
             >
-              <img src="/assets/The%20Loom%20Final.png" alt="The Loom" className="h-10 opacity-70 group-hover:opacity-100 transition-opacity" />
+              <span className="text-lg font-bold text-text-primary opacity-70 group-hover:opacity-100 transition-opacity">The Loom</span>
               <span className="text-[10px] text-text-muted group-hover:text-text-primary transition-colors">
                 {user ? `${user.username}` : (redirecting ? 'Redirecting...' : 'Login here')}
               </span>
@@ -158,11 +158,7 @@ export default function Landing() {
 
       {/* Branding */}
       <section className="flex flex-col items-center pt-12 pb-16 px-6">
-        <img
-          src="/assets/arachne-clean.png"
-          alt="Arachne"
-          className="h-14 mb-4"
-        />
+        <span className="text-3xl font-bold text-text-primary mb-4">Arachne</span>
         <p className="text-lg text-text-muted">
           One bot. Every voice.
         </p>
@@ -206,11 +202,9 @@ export default function Landing() {
         <div className="border-t border-border pt-16 grid grid-cols-1 sm:grid-cols-2 gap-10">
           {/* Arachne — Add to Discord */}
           <div className="flex flex-col items-center text-center">
-            <img
-              src="/assets/Arachne%20avatar.png"
-              alt="Arachne"
-              className="w-20 h-20 rounded-full mb-5 border-2 border-border"
-            />
+            <div className="w-20 h-20 rounded-full mb-5 border-2 border-border bg-bg-card flex items-center justify-center">
+              <span className="text-2xl font-bold text-text-muted">A</span>
+            </div>
             <h2 className="text-lg font-semibold text-text-primary mb-2">Add Arachne to your server</h2>
             <p className="text-sm text-text-muted mb-6 max-w-sm">
               Invite the bot to your Discord server. Once added, entities can request access and join the conversation.
@@ -230,11 +224,7 @@ export default function Landing() {
 
           {/* The Loom — Enter dashboard */}
           <div className="flex flex-col items-center text-center">
-            <img
-              src="/assets/The%20Loom%20Final.png"
-              alt="The Loom"
-              className="h-20 mb-5 opacity-80"
-            />
+            <span className="text-2xl font-bold text-text-primary mb-5 opacity-80">The Loom</span>
             <h2 className="text-lg font-semibold text-text-primary mb-2">Enter The Loom</h2>
             <p className="text-sm text-text-muted mb-6 max-w-sm">
               Create your Entity, get your API key, and connect your AI. Manage servers and permissions from the dashboard.
@@ -395,10 +385,10 @@ export default function Landing() {
       <footer className="mt-auto px-6 py-8 border-t border-border/30">
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-3">
           <div className="flex items-center">
-            <img src="/assets/House%20of%20Solance.png" alt="House of Solance" className="h-5 opacity-70" />
+            <span className="text-xs text-text-muted/60">Your Organization</span>
           </div>
           <p className="text-xs text-text-muted/60">
-            © 2026 House of Solance · <a href="https://github.com/SolanceLab/arachne-discord-mcp" target="_blank" rel="noopener noreferrer" className="hover:text-text-muted/80 transition-colors">AGPL-3.0</a> · Privacy by design
+            © 2026 Your Organization · <a href="https://github.com/SolanceLab/arachne-discord-mcp" target="_blank" rel="noopener noreferrer" className="hover:text-text-muted/80 transition-colors">AGPL-3.0</a> · Privacy by design
           </p>
           <div className="flex flex-wrap justify-center items-center gap-3 text-xs text-text-muted/60">
             <Link to="/faq" className="hover:text-text-muted/80 transition-colors">FAQ</Link>

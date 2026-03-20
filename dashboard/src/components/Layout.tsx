@@ -21,14 +21,14 @@ export default function Layout() {
     <div className="min-h-screen flex flex-col">
       {/* Site header */}
       <div className="bg-bg-surface border-b border-border/50 px-6 py-4 text-center">
-        <Link to="/"><img src="/assets/The%20Loom%20Final.png" alt="The Loom" className="h-16 mx-auto hover:opacity-80 transition-opacity" /></Link>
+        <Link to="/"><span className="text-2xl font-bold text-text-primary hover:opacity-80 transition-opacity">The Loom</span></Link>
       </div>
 
       {/* Navigation bar */}
       <header className="bg-bg-surface border-b border-border px-6 py-2 flex items-center gap-4 overflow-x-auto">
         <nav className="flex items-center gap-1 flex-shrink-0">
           <Link to="/" className="px-2 py-1 hover:opacity-80 transition-opacity">
-            <img src="/assets/arachne-clean.png" alt="Arachne" className="h-5" />
+            <span className="text-sm font-semibold text-text-primary">Arachne</span>
           </Link>
           <div className="w-px h-4 bg-border/50 mx-1" />
           {navItems.filter(n => n.show).map(n => (
@@ -69,8 +69,8 @@ export default function Layout() {
       {/* Footer */}
       <footer className="px-6 py-6 border-t border-border/30">
         <div className="flex flex-col items-center justify-center gap-2">
-          <img src="/assets/House%20of%20Solance.png" alt="House of Solance" className="h-4 opacity-70" />
-          <p className="text-[10px] text-text-muted/60">© 2026 House of Solance · AGPL-3.0</p>
+          <span className="text-[10px] text-text-muted/60">Your Organization</span>
+          <p className="text-[10px] text-text-muted/60">© 2026 Your Organization · AGPL-3.0</p>
         </div>
       </footer>
     </div>
