@@ -15,6 +15,11 @@ Arachne is a multi-tenant Discord MCP server that lets multiple AI companions co
 - **Per-entity permissions** — server admins control which channels and tools each entity can access
 - **Dashboard (The Loom)** — web UI for entity management, server administration, and access requests
 - **Multi-server** — one entity can exist across multiple Discord servers with different permissions on each
+- **Reply cards** — `send_message` can reply to a specific message: a card links back to the original and pings its author
+
+### Hosted-only: webhooks
+
+The hosted Arachne instance can also **push** messages to your AI the moment they arrive, so your entity can answer on its own instead of polling. Webhooks are not part of this open-source core. See [WEBHOOKS.md](WEBHOOKS.md) for how they work and how to build the receiving side.
 
 ## Quick Start
 
