@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ChannelType, type TextChannel } from 'discord.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { EntityContext } from './types.js';
+import { buildReplyEmbed, withReplyMention } from './reply-card.js';
 
 /**
  * Translate Discord API errors into human-readable messages.
@@ -69,25 +70,62 @@ export function registerTools(server: McpServer, ctx: EntityContext): void {
   // --- send_message ---
   server.tool(
     'send_message',
-    'Send a message to a Discord channel as this entity (with your name and avatar). To mention users use <@USER_ID>, roles use <@&ROLE_ID>, channels use <#CHANNEL_ID>.',
+    'Send a message to a Discord channel as this entity (with your name and avatar). To mention users use <@USER_ID>, roles use <@&ROLE_ID>, channels use <#CHANNEL_ID>. To reply to a specific message, pass reply_to_message_id: a reply card (author, jump link, first 100 characters of the original) is attached under your message. Like a native reply, it pings the author (a mention is prefixed); pass ping=false to reply silently.',
     {
       channel_id: z.string().describe('The channel ID to send the message to'),
       content: z.string().describe('The message content to send. Use <@USER_ID> to mention users, <@&ROLE_ID> for roles, <#CHANNEL_ID> for channels.'),
+      reply_to_message_id: z.string().optional().describe('Optional ID of a message in the same channel to reply to. Attaches a reply card linking to it.'),
+      ping: z.boolean().optional().default(true).describe('With reply_to_message_id: mention (notify) the replied-to author, like a native reply. Default true.'),
     },
-    async ({ channel_id, content }) => {
+    async ({ channel_id, content, reply_to_message_id, ping }) => {
       if (!canAccessChannel(channel_id)) {
         return { content: [{ type: 'text' as const, text: 'Error: You do not have access to this channel.' }] };
       }
       try {
+        let embeds: Array<Record<string, unknown>> | undefined;
+        let replyWarning: string | undefined;
+        if (reply_to_message_id) {
+          try {
+            const channel = await discordClient.channels.fetch(channel_id);
+            if (!channel || !('messages' in channel) || !('guildId' in channel) || !channel.guildId) {
+              throw new Error('Channel does not hold messages');
+            }
+            const parent = await (channel as any).messages.fetch(reply_to_message_id);
+            embeds = [buildReplyEmbed({
+              guildId: channel.guildId,
+              channelId: channel_id,
+              messageId: parent.id,
+              authorName: parent.member?.displayName ?? parent.author?.displayName ?? parent.author?.username ?? 'Unknown',
+              authorAvatarUrl: parent.member?.displayAvatarURL?.() ?? parent.author?.displayAvatarURL?.() ?? null,
+              content: parent.content ?? '',
+              hasAttachments: (parent.attachments?.size ?? 0) > 0 || (parent.embeds?.length ?? 0) > 0,
+            }, entity.accent_color)];
+            // Webhook-authored parents (entities) have no user to notify.
+            const pingTarget = parent.webhookId ? null : (parent.author?.id ?? null);
+            const pinged = withReplyMention(content, pingTarget, ping);
+            if (ping && pingTarget && pinged === content && !content.includes(pingTarget)) {
+              replyWarning = 'Reply card attached, but the author was not pinged: the mention would push the message past 2000 characters.';
+            }
+            content = pinged;
+          } catch (err) {
+            replyWarning = `Reply card not attached (${friendlyError(err)}); message sent without it.`;
+          }
+        }
         const result = await webhookManager.sendAsEntity(
           channel_id,
           content,
           entity.name,
           entity.avatar_url,
-          entity.id
+          entity.id,
+          embeds
         );
         return {
-          content: [{ type: 'text' as const, text: JSON.stringify({ success: true, message_id: result.messageId }) }],
+          content: [{ type: 'text' as const, text: JSON.stringify({
+            success: true,
+            message_id: result.messageId,
+            ...(reply_to_message_id && { reply_card: embeds !== undefined }),
+            ...(replyWarning && { warning: replyWarning }),
+          }) }],
         };
       } catch (err) {
         return {

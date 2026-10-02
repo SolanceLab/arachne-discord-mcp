@@ -110,12 +110,14 @@ export class WebhookManager {
     content: string,
     entityName: string,
     entityAvatarUrl?: string | null,
-    entityId?: string
+    entityId?: string,
+    embeds?: Array<Record<string, unknown>>
   ): Promise<{ messageId: string }> {
     const webhook = await this.getWebhook(channelId);
 
     const msg = await webhook.send({
       content,
+      ...(embeds?.length && { embeds }),
       username: entityName,
       avatarURL: bustAvatarCache(entityAvatarUrl),
       allowedMentions: { parse: ['users'] },
